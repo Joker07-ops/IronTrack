@@ -155,6 +155,10 @@ a Postgres database — set these environment variables in your Vercel project:
      `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`.
 3. Import the repo on Vercel (Framework Preset: **Other**). The build/start commands are
    handled automatically by `vercel.json`.
+4. If you use Sign-In with Google, register one redirect URI in Google Cloud for the
+   **production** domain only: `https://<your-app>.vercel.app/login/google/authorized`.
+   Note that every Vercel preview deployment gets its own URL, and Google validates the
+   redirect URI per domain — so always test on the production alias, never on preview URLs.
 
 > **Note:** serverless filesystems are read-only — profile photos are stored in the
 > database (served via `/avatar/<id>`) instead of on disk.
