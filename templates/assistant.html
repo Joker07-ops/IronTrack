@@ -1,0 +1,309 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | IronBot AI Fitness Assistant{% endblock %}
+{% block seo_description %}Ask IronBot, the AI fitness assistant, anything about workouts, exercise form, nutrition, recovery and training tips — built into the IronTrack workout tracker.{% endblock %}
+
+{% block content %}
+<div class="iron-chat-layout">
+
+    <aside class="chat-sidebar" id="chatSidebar" aria-label="Chat history">
+        <div class="chat-sidebar-top">
+            <button class="chat-new-btn" onclick="newChat()">
+                <span aria-hidden="true">+</span> New chat
+            </button>
+        </div>
+        <p class="chat-history-heading">Recent</p>
+        <div class="chat-history-list" id="chatHistoryList"></div>
+        <p class="chat-history-empty" id="chatHistoryEmpty" hidden>No conversations yet</p>
+    </aside>
+
+    <div class="chat-sidebar-backdrop" id="chatSidebarBackdrop" onclick="toggleSidebar()"></div>
+
+    <div class="iron-chat-page">
+
+        <div class="iron-chat-header">
+            <button class="chat-sidebar-toggle" onclick="toggleSidebar()" title="Chat history" aria-label="Chat history">{{ icon('history', 'icon-md') }}</button>
+            <div class="iron-chat-header-avatar">{{ icon('sparkles', 'icon-md') }}</div>
+            <div>
+                <h1 class="iron-chat-title">IronBot</h1>
+                <p class="iron-chat-subtitle"><span class="status-dot"></span> Your AI fitness assistant</p>
+            </div>
+        </div>
+
+        <div class="iron-chat-messages" id="chatMessages">
+        </div>
+
+        <div class="iron-chat-input-bar">
+            <div class="iron-chat-input-inner">
+                <input
+                    type="text"
+                    id="chatInput"
+                    class="chat-input"
+                    placeholder="Message IronBot..."
+                    onkeydown="if(event.key==='Enter') sendMessage()"
+                    autocomplete="off"
+                >
+                <button class="chat-send-btn" onclick="sendMessage()" id="sendBtn">
+                    {{ icon('send', 'icon-sm') }}
+                </button>
+            </div>
+            <p class="iron-chat-disclaimer">IronBot can make mistakes. For medical concerns, consult a professional.</p>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+const SPRITE = "{{ url_for('static', filename='icons/sprite.svg') }}";
+const INITIAL_SESSIONS = {{ chat_sessions | tojson }};
+const IS_AUTHED = {{ 'true' if current_user.is_authenticated else 'false' }};
+
+function svgIcon(name, size) {
+    size = size || 16;
+    return `<svg width="${size}" height="${size}" class="icon" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><use href="${SPRITE}#icon-${name}"></use></svg>`;
+}
+
+const chatMessages = document.getElementById('chatMessages');
+let currentSessionId = null;
+let sessions = Array.isArray(INITIAL_SESSIONS) ? INITIAL_SESSIONS : [];
+let sidebarAutoOpened = false;
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+}
+
+function greetingContent() {
+    const fragment = document.createDocumentFragment();
+
+    const g = document.createElement('div');
+    g.className = 'chat-message bot iron-msg-in';
+    g.id = 'greetingMsg';
+    g.innerHTML = `
+        <div class="chat-avatar">${svgIcon('bot', 18)}</div>
+        <div class="chat-bubble">Hey! I'm your personal fitness assistant. Ask me anything about workouts, exercises, nutrition, recovery, or training tips. I'm here to help you reach your goals!</div>`;
+    fragment.appendChild(g);
+
+    const s = document.createElement('div');
+    s.className = 'chat-suggestions';
+    s.id = 'chatSuggestions';
+    s.innerHTML = `
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">How many rest days do I need per week?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">What should I eat before a workout?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">How do I build bigger arms?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">Is cardio better before or after weights?</button>`;
+    fragment.appendChild(s);
+
+    return fragment;
+}
+
+function renderSidebar() {
+    const list = document.getElementById('chatHistoryList');
+    const empty = document.getElementById('chatHistoryEmpty');
+    if (!IS_AUTHED) {
+        list.innerHTML = '<p class="chat-history-empty">Sign in to save your chat history.</p>';
+        empty.hidden = true;
+        return;
+    }
+    list.innerHTML = sessions.map(s => {
+        const active = s.id === currentSessionId ? ' active' : '';
+        return `<div class="chat-history-item${active}" onclick="openSession(${s.id})">
+            <span class="chat-history-title">${esc(s.title)}</span>
+            <button class="chat-history-delete" title="Delete conversation" onclick="deleteSession(${s.id}, event)">${svgIcon('x', 12)}</button>
+        </div>`;
+    }).join('');
+    empty.hidden = sessions.length > 0;
+}
+
+function maybeAutoOpenSidebar() {
+    if (sidebarAutoOpened) return;
+    if (window.innerWidth <= 900 && sessions.length > 0) {
+        sidebarAutoOpened = true;
+        const sb = document.getElementById('chatSidebar');
+        const bk = document.getElementById('chatSidebarBackdrop');
+        sb.classList.add('open');
+        if (bk) bk.classList.add('open');
+    }
+}
+
+async function refreshSessions() {
+    if (!IS_AUTHED) return;
+    try {
+        const res = await fetch('/api/chat/sessions');
+        const data = await res.json();
+        sessions = Array.isArray(data) ? data : [];
+        renderSidebar();
+        maybeAutoOpenSidebar();
+    } catch (e) { /* ignore */ }
+}
+
+function setGreeting() {
+    chatMessages.innerHTML = '';
+    chatMessages.appendChild(greetingContent());
+    scrollToBottom();
+}
+
+async function newChat() {
+    currentSessionId = null;
+    setGreeting();
+    renderSidebar();
+    closeSidebar();
+    const input = document.getElementById('chatInput');
+    if (input) input.value = '';
+}
+
+async function openSession(id) {
+    try {
+        const res = await fetch(`/api/chat/sessions/${id}`);
+        const data = await res.json();
+        if (data.error) return;
+        currentSessionId = id;
+        chatMessages.innerHTML = '';
+        (data.messages || []).forEach(m => {
+            const role = (m.role === 'assistant' || m.role === 'bot') ? 'bot' : 'user';
+            appendMessage(role, m.content);
+        });
+        renderSidebar();
+        closeSidebar();
+    } catch (e) { /* ignore */ }
+}
+
+async function deleteSession(id, ev) {
+    if (ev) ev.stopPropagation();
+    if (!confirm('Delete this conversation?')) return;
+    try {
+        await fetch(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+        sessions = sessions.filter(s => s.id !== id);
+        if (currentSessionId === id) {
+            newChat();
+        } else {
+            renderSidebar();
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function toggleSidebar() {
+    const sb = document.getElementById('chatSidebar');
+    const bk = document.getElementById('chatSidebarBackdrop');
+    const open = !sb.classList.contains('open');
+    sb.classList.toggle('open', open);
+    if (bk) bk.classList.toggle('open', open);
+}
+
+function closeSidebar() {
+    document.getElementById('chatSidebar').classList.remove('open');
+    const bk = document.getElementById('chatSidebarBackdrop');
+    if (bk) bk.classList.remove('open');
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const suggestions = document.getElementById('chatSuggestions');
+    if (suggestions) suggestions.style.display = 'none';
+    const greeting = document.getElementById('greetingMsg');
+    if (greeting) greeting.style.display = 'none';
+
+    appendMessage('user', message);
+    input.value = '';
+    setLoading(true);
+
+    const body = { message: message };
+    let sessionId = currentSessionId;
+
+    try {
+        if (IS_AUTHED && !sessionId) {
+            const res = await fetch('/api/chat/sessions', { method: 'POST' });
+            const d = await res.json();
+            sessionId = d.id;
+            currentSessionId = sessionId;
+        }
+        if (sessionId) body.session_id = sessionId;
+
+        const response = await fetch('/assistant/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await response.json();
+
+        if (data.session_id) currentSessionId = data.session_id;
+        if (data.error) {
+            appendMessage('bot', 'Error: ' + data.error);
+        } else {
+            appendMessage('bot', data.reply);
+        }
+        if (IS_AUTHED) refreshSessions();
+    } catch (err) {
+        appendMessage('bot', 'Something went wrong. Please try again.');
+    }
+
+    setLoading(false);
+}
+
+function sendSuggestion(btn) {
+    document.getElementById('chatInput').value = btn.textContent;
+    sendMessage();
+}
+
+function appendMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${role}`;
+
+    if (role === 'bot') {
+        const avatar = document.createElement('div');
+        avatar.className = 'chat-avatar';
+        avatar.innerHTML = svgIcon('bot', 18);
+        div.appendChild(avatar);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+    div.appendChild(bubble);
+
+    chatMessages.appendChild(div);
+    scrollToBottom();
+    requestAnimationFrame(() => div.classList.add('iron-msg-in'));
+}
+
+function scrollToBottom() {
+    chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+}
+
+function setLoading(loading) {
+    const btn = document.getElementById('sendBtn');
+    const input = document.getElementById('chatInput');
+
+    if (loading) {
+        btn.disabled = true;
+        input.disabled = true;
+
+        const typing = document.createElement('div');
+        typing.className = 'chat-message bot';
+        typing.id = 'typingIndicator';
+        typing.innerHTML = `<div class="chat-avatar">${svgIcon('bot', 18)}</div><div class="chat-bubble typing-dots"><span></span><span></span><span></span></div>`;
+        chatMessages.appendChild(typing);
+        scrollToBottom();
+        requestAnimationFrame(() => typing.classList.add('iron-msg-in'));
+    } else {
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
+
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+    }
+}
+
+setGreeting();
+renderSidebar();
+maybeAutoOpenSidebar();
+refreshSessions();
+scrollToBottom();
+</script>
+{% endblock %}

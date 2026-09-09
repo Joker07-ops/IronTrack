@@ -1,0 +1,2 @@
+{# IronTrack Icon Macro — uses local SVG sprite, zero CDN, zero JS #}
+{% macro icon(name, cls='icon-sm') %}<svg class="icon {{ cls }}" aria-hidden="true" focusable="false"><use href="{{ url_for('static', filename='icons/sprite.svg') }}#icon-{{ name }}"></use></svg>{% endmacro %}

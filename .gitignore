@@ -1,0 +1,56 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+
+# ── Secrets / environment ──
+.env
+.env.flask*
+.flaskenv
+.secret_key
+secret_key.txt
+
+# ── Databases / runtime data ──
+*.db
+*.sqlite
+*.sqlite3
+instance/
+progress_data.json
+workout_data.json
+workout_backup.py
+
+# ── Uploads (user content) ──
+static/uploads/*
+!static/uploads/.gitkeep
+
+# ── Node ──
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ── Editor / OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Logs / temp ──
+*.log
+logs/
+tmp/
+temp/

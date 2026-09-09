@@ -1,0 +1,65 @@
+{% from '_icons.html' import icon %}
+{% extends "auth_base.html" %}
+{% block title %}IronTrack | Login{% endblock %}
+{% block seo_description %}Log in to IronTrack and pick up your workout tracking where you left off — your plan, history and streaks are all saved.{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-card-header">
+        <h1>WELCOME BACK</h1>
+        <p>Log in to continue your fitness journey</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+            <div class="auth-flash">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login" class="auth-form" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+        <div class="form-group">
+            <label>Email or Username</label>
+            <div class="input-wrap">
+                {{ icon("user","icon-input") }}
+                <input type="text" name="login_id" class="auth-input" placeholder="you@example.com or username" required autocomplete="username" maxlength="254">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+                {{ icon("lock","icon-input") }}
+                <input type="password" name="password" class="auth-input" placeholder="••••••••" required autocomplete="current-password" maxlength="128" id="loginPassword">
+                <button type="button" class="pw-toggle" onclick="togglePW('loginPassword',this)" tabindex="-1" aria-label="Toggle password visibility">{{ icon("eye","icon-input") }}</button>
+            </div>
+        </div>
+        <div class="auth-row">
+            <label class="remember-label">
+                <input type="checkbox" name="remember"> Remember me
+            </label>
+            <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+        </div>
+        <button type="submit" class="auth-btn">Log In</button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+
+    <a href="/login/google" class="google-btn">
+        <svg class="google-btn-icon" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+            <path fill="#FFC107" d="M43.6 20.1H42V20h-18v8h11.3C33.5 32.8 29 36 23.6 36 16.7 36 11 30.3 11 23.4S16.7 10.8 23.6 10.8c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.3 5.2 29.3 3 23.6 3 12.3 3 3.2 12.2 3.2 23.5S12.3 44 23.6 44c6.6 0 12.1-2.4 16.2-6.8l-5.7-5.7c-2.3 1.5-5.3 2.4-8.5 2.4-4.3 0-7.9-2.9-9.2-6.8h-.1v-7.2H42c.1 1.2.2 2.5.2 3.7.1 1 .1 2.1-.6 2z"/>
+            <path fill="#FF3D00" d="M6.1 14.5l6.6 4.8C13.8 16.1 18.3 13 23.6 13c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.3 5.2 29.3 3 23.6 3 16.4 3 10.2 7.6 6.1 14.5z"/>
+            <path fill="#4CAF50" d="M23.6 43c5.7 0 10.6-2.1 14.3-5.5l-6.4-5.2c-1.9 1.3-4.4 2.1-7.9 2.1-5.3 0-9.7-3.1-11.7-7.6l-6.8 4.9C10.1 39.6 16.4 43 23.6 43z"/>
+            <path fill="#1976D2" d="M43.6 20.1H42V20h-18v8h11.3c-1.5 4.3-5.2 7-10.7 7-4.3 0-7.9-2.9-9.2-6.8l-6.8 4.9C10.6 36.9 14.3 43 23.6 43c6.6 0 11.9-2.4 16.2-6.8l-6.5-6.5c2-1.2 3.8-2.7 5.2-4.5 1.4-1.9 2.5-3.9 3.1-6.1z"/>
+        </svg>
+        <span>Continue with Google</span>
+    </a>
+
+    <a href="/explore" class="explore-btn">
+        <span class="explore-btn-icon">
+            {{ icon("compass","icon-sm") }} Explore IronTrack
+        </span>
+        <span class="explore-btn-sub">No account needed — browse as guest</span>
+    </a>
+
+    <p class="auth-switch">Don't have an account? <a href="/register">Create one free</a></p>
+</div>
+{% endblock %}

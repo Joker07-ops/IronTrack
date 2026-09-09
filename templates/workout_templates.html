@@ -1,0 +1,53 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Workout Templates & Training Plans{% endblock %}
+{% block seo_description %}Browse ready-made workout templates and training plans split by muscle groups. Apply a plan instantly and start tracking your gym progress with IronTrack.{% endblock %}
+
+{% block content %}
+<div class="ex-back">
+    <a href="/workout" class="back-link">← Back to Workout</a>
+</div>
+
+<div class="page-header">
+    <h1>WORKOUT TEMPLATES</h1>
+    <p>Pick a program and IronTrack will set up your days and exercises automatically.</p>
+</div>
+
+{% if not guest %}
+<div class="template-warning">
+    {{ icon('alert-triangle','icon-xs') }} Applying a template <strong>replaces your current workout days and exercises</strong>.
+    Your history and streak are kept.
+</div>
+{% endif %}
+
+<div class="template-grid">
+    {% for id, t in templates.items() %}
+    <div class="template-card">
+        <div class="template-card-header">
+            <span class="template-icon">{{ icon(t.icon, "icon-xl") }}</span>
+            <div class="template-tags">
+                <span class="ex-tag difficulty-{{ t.level | lower }}">{{ t.level }}</span>
+                <span class="ex-tag">{{ t.days_count }} Days</span>
+            </div>
+        </div>
+        <h2 class="template-name">{{ t.name }}</h2>
+        <p class="template-desc">{{ t.description }}</p>
+
+        <div class="template-days">
+            {% for day in t.plan.keys() %}
+            <span class="template-day-chip">{{ day }}</span>
+            {% endfor %}
+        </div>
+
+        {% if guest %}
+        <a href="/register" class="btn btn-primary btn-full">Sign Up to Use This Plan</a>
+        {% else %}
+        <form method="POST" action="/templates/apply/{{ id }}"
+              onsubmit="return confirm('Apply &quot;{{ t.name }}&quot;? This replaces your current workout days and exercises.')">
+            <button type="submit" class="btn btn-primary btn-full">Use This Plan</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

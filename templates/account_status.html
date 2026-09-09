@@ -1,0 +1,68 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Account Status{% endblock %}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>ACCOUNT STATUS</h1>
+    <p>Manage your account restoration</p>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}{% for msg in messages %}
+        <div class="flash-message">{{ msg }}</div>
+    {% endfor %}{% endif %}
+{% endwith %}
+
+<div class="lifecycle-wrap">
+    <div class="lifecycle-card">
+
+        {% if status == 'pending_delete' %}
+            <div class="lifecycle-icon danger">{{ icon('x-circle', 'icon-md') }}</div>
+            <h2 class="lifecycle-title">Your account is scheduled for deletion</h2>
+            <p class="lifecycle-desc">
+                This is the last chance. Your account, plans, progress and chat history will be
+                <b>permanently deleted in {{ days_left }} day{% if days_left != 1 %}s{% endif %}</b>.
+            </p>
+
+            <div class="lifecycle-count">
+                <span class="lifecycle-count-num">{{ days_left }}</span>
+                <span class="lifecycle-count-label">days remaining</span>
+            </div>
+
+            <div class="lifecycle-percent-bar">
+                <div class="lifecycle-percent-fill" style="width:{{ ((30 - days_left) / 30 * 100) | round(0) }}%"></div>
+            </div>
+
+            <p class="lifecycle-desc small">
+                Changed your mind? Restore your account now and return whenever you want, nothing is lost. We've also emailed you a restore link valid during this period.
+            </p>
+
+            <form method="POST" action="/account/reactivate">
+                <button type="submit" class="btn btn-primary btn-full">{{ icon('refresh-cw','icon-sm') }} Keep My Account</button>
+            </form>
+
+        {% else %}
+
+            <div class="lifecycle-icon">{{ icon('moon', 'icon-md') }}</div>
+            <h2 class="lifecycle-title">Your account is deactivated</h2>
+            <p class="lifecycle-desc">
+                Your account is temporary hidden. No one can see your profile, and you won't receive any notifications.
+                Your workouts, progress and history are safe and will be waiting for you.
+            </p>
+            <form method="POST" action="/account/reactivate">
+                <button type="submit" class="btn btn-primary btn-full">{{ icon('play-circle','icon-sm') }} Reactivate Account</button>
+            </form>
+            <p class="lifecycle-desc small">
+                You can also use the reactivation link we emailed you when you deactivated.
+            </p>
+        {% endif %}
+
+        <div class="lifecycle-footer">
+            <a href="/logout" class="btn btn-ghost btn-sm">Log Out</a>
+            <span class="lifecycle-account">{{ user.email }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

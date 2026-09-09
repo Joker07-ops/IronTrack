@@ -1,0 +1,104 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Admin — Feedback Inbox{% endblock %}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="page-header admin-page-header">
+    <p class="features-eyebrow">Admin only</p>
+    <h1>FEEDBACK INBOX</h1>
+    <p>Everything visitors send from the About page. Reply right here. If they left an email and mail is configured, the reply is emailed to them too.</p>
+</div>
+
+<div class="admin-stats">
+    <div class="stat-card">
+        <span class="stat-number">{{ total }}</span>
+        <span class="stat-label">{{ icon('mail','icon-xs') }} Total Entries</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number {{ 'stat-number-warn' if unreplied else '' }}">{{ unreplied }}</span>
+        <span class="stat-label">{{ icon('alert-triangle','icon-xs') }} New / Unreplied</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ 'ON' if mail_enabled else 'OFF' }}</span>
+        <span class="stat-label">{{ icon('send','icon-xs') }} Email Delivery</span>
+    </div>
+</div>
+
+<div class="admin-tabs">
+    <a href="/admin/feedback" class="admin-tab {{ 'active' if not only_unreplied else '' }}">All</a>
+    <a href="/admin/feedback?f=unreplied" class="admin-tab {{ 'active' if only_unreplied else '' }}">Unreplied</a>
+</div>
+
+{% if not mail_enabled %}
+<div class="template-warning">
+    {{ icon('alert-triangle','icon-xs') }} <strong>Mail is not configured</strong> (no MAIL_USERNAME/MAIL_PASSWORD). Replies are saved to the database only, nothing is emailed.
+</div>
+{% endif %}
+
+{% if not items %}
+<div class="fb-empty">
+    {{ icon('mail','icon-xl') }}
+    <p>No feedback entries{{ ' waiting for a reply' if only_unreplied else '' }}. Nice and clean.</p>
+</div>
+{% endif %}
+
+{% for item in items %}
+<div class="fb-item">
+    <div class="fb-head">
+        <div class="fb-badges">
+            <span class="ex-tag">{{ item.category }}</span>
+            {% if item.status == 'replied' %}
+            <span class="fb-status status-replied">{{ icon('check','icon-xs') }} Replied</span>
+            {% elif item.status == 'reviewed' %}
+            <span class="fb-status status-reviewed">Handled</span>
+            {% else %}
+            <span class="fb-status status-new">New</span>
+            {% endif %}
+        </div>
+        <span class="fb-date">{{ item.created_at }}</span>
+    </div>
+
+    <div class="fb-meta">
+        <span class="fb-name">{{ icon('user','icon-xs') }} {{ item.name or 'Anonymous' }}</span>
+        {% if item.email %}<a class="fb-email" href="mailto:{{ item.email }}">{{ icon('mail','icon-xs') }} {{ item.email }}</a>{% else %}<span class="fb-muted">{{ icon('eye-off','icon-xs') }} no email</span>{% endif %}
+    </div>
+
+    <p class="fb-body">{{ item.message }}</p>
+
+    {% if item.reply %}
+    <div class="fb-reply">
+        <span class="fb-reply-label">{{ icon('at-sign','icon-xs') }} Your reply <em>({{ item.replied_at }})</em></span>
+        <p>{{ item.reply }}</p>
+    </div>
+    {% endif %}
+
+    <form class="fb-reply-form" method="POST" action="/admin/feedback/{{ item.id }}/reply">
+        <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
+        <textarea class="text-input" name="reply" rows="2" maxlength="4000" placeholder="Write your reply here{% if item.email and mail_enabled %} — it will be emailed to {{ item.email }}{% endif %}...">{{ item.reply or '' }}</textarea>
+        <button type="submit" class="btn btn-primary btn-sm">Send {{ icon('send','icon-sm') }}</button>
+    </form>
+
+    <div class="fb-actions">
+        {% if item.status != 'reviewed' %}
+        <form method="POST" action="/admin/feedback/{{ item.id }}/mark">
+            <input type="hidden" name="status" value="reviewed">
+            <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
+            <button type="submit" class="btn btn-outline btn-sm">Mark handled</button>
+        </form>
+        {% endif %}
+        {% if item.status != 'new' %}
+        <form method="POST" action="/admin/feedback/{{ item.id }}/mark">
+            <input type="hidden" name="status" value="new">
+            <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
+            <button type="submit" class="btn btn-outline btn-sm">Reopen</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="/admin/feedback/{{ item.id }}/delete" onsubmit="return confirm('Delete this feedback entry permanently?')">
+            <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

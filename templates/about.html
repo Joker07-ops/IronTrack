@@ -1,0 +1,173 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | About Us{% endblock %}
+{% block seo_description %}Learn about IronTrack, the free workout tracker built for athletes. Our mission, values and the story behind training hard and tracking smart.{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-center">
+    <h1>ABOUT IRONTRACK</h1>
+    <p>Built for athletes who train hard and track smart.</p>
+</div>
+
+<!-- MISSION -->
+<section class="about-story">
+    <div class="about-story-badge">{{ icon('dumbbell','icon-sm') }} Our Mission</div>
+    <h2 class="section-title">TRACK YOUR WORKOUTS.<br><span>NEVER GUESS YOUR PROGRESS.</span></h2>
+    <p class="about-story-text">
+        Most fitness apps bury your data behind subscriptions, ads and bloated features.
+        IronTrack was built on a simple idea: a free, fast and focused workout tracker that
+        respects your time. Plan your week, log each exercise, revisit your history and let an
+        AI assistant coach you. All in one place, without the noise.
+    </p>
+</section>
+
+<!-- VALUES -->
+<section class="features-section">
+    <div class="features-header">
+        <p class="features-eyebrow">What we stand for</p>
+        <h2 class="section-title">OUR<br><span>VALUES</span></h2>
+    </div>
+    <div class="features-grid features-grid-values">
+        <div class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('target','icon-feature') }}</div>
+            <h3>Discipline</h3>
+            <p>Consistency beats intensity. We build tools that make showing up again tomorrow easy.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('activity','icon-feature') }}</div>
+            <h3>Simplicity</h3>
+            <p>No clutter, no paywalls, no guessing. Every feature exists because it helps you train.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('shield','icon-feature') }}</div>
+            <h3>Your Data, Yours</h3>
+            <p>Your workout history and progress belong to you. We keep them private and out of reach of ads.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('zap','icon-feature') }}</div>
+            <h3>Always Free</h3>
+            <p>IronTrack is free to use. Training hard shouldn't require a subscription.</p>
+        </div>
+    </div>
+</section>
+
+<!-- DIVIDER -->
+<section class="about-divider">
+    <div class="features-header">
+        <p class="features-eyebrow">A snapshot at a glance</p>
+        <h2 class="section-title">IRONTRACK BY<br><span>THE NUMBERS</span></h2>
+    </div>
+    <p class="about-divider-text">What you get when you train hard and track smart.</p>
+</section>
+
+<!-- STATS -->
+<section class="about-stats">
+    <div class="stat-card">
+        <span class="stat-number">25+</span>
+        <span class="stat-label">{{ icon('dumbbell','icon-xs') }} Exercises</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">9</span>
+        <span class="stat-label">{{ icon('calendar','icon-xs') }} Workout Days</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">24/7</span>
+        <span class="stat-label">{{ icon('bot','icon-xs') }} AI Assistant</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">100%</span>
+        <span class="stat-label">{{ icon('flame','icon-xs') }} Free Forever</span>
+    </div>
+</section>
+
+<!-- WHO WE ARE -->
+<section class="about-story">
+    <div class="about-story-badge">{{ icon('user','icon-sm') }} Who We Are</div>
+    <h2 class="section-title">A SMALL TEAM.<br><span>BIG AMBITIONS.</span></h2>
+    <p class="about-story-text">
+        IronTrack is an independent project created by a small team of lifters, runners and
+        engineers. We started it because we were tired of fitness apps that charge for basic
+        features, sell your data and clutter every screen with ads.
+    </p>
+    <p class="about-story-text">
+        So we built the tracker we wanted: free, fast and focused. What began as a simple gym
+        log has grown into a full platform with training plans, progress history, health
+        calculators and an AI coaching assistant. And it stays free for everyone.
+    </p>
+</section>
+
+<!-- CONTACT -->
+<section class="features-section">
+    <div class="features-header">
+        <p class="features-eyebrow">Reach the team</p>
+        <h2 class="section-title">GET IN<br><span>TOUCH</span></h2>
+    </div>
+    <div class="about-contact-grid">
+        <a href="mailto:support@irontrack.app" class="about-contact-card">
+            <div class="feature-icon-wrap">{{ icon('mail','icon-feature') }}</div>
+            <h3>Email Us</h3>
+            <p>Questions, partnerships or press. Write to us anytime and we'll get back to you.</p>
+            <span class="about-contact-address">support@irontrack.app</span>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+        <a href="#give-feedback" class="about-contact-card">
+            <div class="feature-icon-wrap">{{ icon('clipboard-list','icon-feature') }}</div>
+            <h3>Send Feedback</h3>
+            <p>Have an idea, a bug, or just want to say hi? The feedback form below goes straight to our team.</p>
+            <span class="about-contact-address">Feedback form below</span>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+        <a href="/assistant" class="about-contact-card">
+            <div class="feature-icon-wrap">{{ icon('bot','icon-feature') }}</div>
+            <h3>Ask IronBot</h3>
+            <p>Training questions answered 24/7 by our AI fitness assistant. Form, plans, nutrition and more.</p>
+            <span class="about-contact-address">Ai is online now</span>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+    </div>
+</section>
+
+<!-- FEEDBACK -->
+<section class="about-feedback" id="give-feedback">
+    <div class="features-header">
+        <p class="features-eyebrow">We're listening</p>
+        <h2 class="section-title">GIVE<br><span>FEEDBACK</span></h2>
+    </div>
+    <form class="feedback-form" method="POST" action="/feedback">
+        <div class="bmi-form-row">
+            <div class="form-group">
+                <label for="fb-category">Category</label>
+                <select class="text-input" id="fb-category" name="category">
+                    <option value="General">General</option>
+                    <option value="Bug Report">Bug Report</option>
+                    <option value="Feature Request">Feature Request</option>
+                    <option value="Suggestion">Suggestion</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="fb-name">Name <span class="fb-optional">(optional)</span></label>
+                <input class="text-input" id="fb-name" name="name" type="text" maxlength="80" placeholder="How should we know you?" value="{{ fb.name if fb else '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="fb-email">Email <span class="fb-optional">(optional — only if you want a reply)</span></label>
+            <input class="text-input" id="fb-email" name="email" type="email" maxlength="160" placeholder="you@example.com" value="{{ fb.email if fb else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="fb-message">Your message</label>
+            <textarea class="text-input settings-textarea" id="fb-message" name="message" maxlength="2000" rows="5" placeholder="Tell us what you love, what's buggy, or what you wish existed...">{{ fb.message if fb else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Send Feedback {{ icon('send','icon-sm') }}</button>
+    </form>
+</section>
+
+<!-- CTA -->
+<section class="about-cta">
+    <h2 class="section-title">READY TO TRAIN HARD?</h2>
+    <p>Create a free account and start tracking in under a minute.</p>
+    <div class="about-cta-buttons">
+        <a href="/register" class="btn btn-primary btn-lg">Get Started {{ icon('arrow-right','icon-sm') }}</a>
+        <a href="/workout" class="btn btn-outline btn-lg">Explore Workout</a>
+    </div>
+</section>
+{% endblock %}

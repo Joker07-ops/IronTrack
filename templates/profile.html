@@ -1,0 +1,624 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Profile & Settings{% endblock %}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-center">
+    <h1>YOUR PROFILE</h1>
+    <p>Everything about your account, in one place</p>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}{% for msg in messages %}
+        <div class="flash-message">{{ msg }}</div>
+    {% endfor %}{% endif %}
+{% endwith %}
+
+<div class="ig-profile">
+
+    <!-- IG-STYLE PROFILE HEADER -->
+    <div class="ig-header">
+        <div class="ig-avatar-ring">
+            {% if user.get('avatar') %}
+            <img src="{{ url_for('static', filename=user.avatar) }}" alt="{{ user.first_name or user.name }}" class="ig-avatar ig-avatar-img">
+            {% else %}
+            <div class="ig-avatar ig-avatar-initials">{{ (user.first_name or user.name)[0].upper() }}{{ ((user.last_name or (user.name.split(' ',1)[1] if ' ' in user.name else ''))[:1]).upper() }}</div>
+            {% endif %}
+            <label class="ig-avatar-edit" for="avatarInput" title="Change photo">{{ icon('camera','icon-sm') }}</label>
+        </div>
+
+        <div class="ig-identity">
+            <div class="ig-name-row">
+                <h1 class="ig-username">{{ (user.first_name or user.name) ~ ((' ' + user.last_name) if user.last_name else '') }}</h1>
+                {% if user.is_verified %}
+                <span class="ig-verified" title="Verified account">{{ icon('check','icon-xs') }}</span>
+                {% endif %}
+                <div class="ig-actions">
+                    <button class="btn btn-outline btn-sm" onclick="showSection('profile', this, true)">{{ icon('user','icon-sm') }} Edit Profile</button>
+                    <a href="/logout" class="btn btn-ghost btn-sm">{{ icon('x','icon-sm') }} Logout</a>
+                </div>
+            </div>
+
+            <div class="ig-stats">
+                <div class="ig-stat"><span class="ig-stat-num">{{ streak }}</span><span class="ig-stat-label">Day Streak</span></div>
+                <div class="ig-stat"><span class="ig-stat-num">{{ history_count }}</span><span class="ig-stat-label">Exercises Done</span></div>
+                <div class="ig-stat"><span class="ig-stat-num">{{ stats.percent }}%</span><span class="ig-stat-label">Completion Rate</span></div>
+            </div>
+
+            <div class="ig-bio">
+                <p class="ig-bio-name">{{ (user.first_name or user.name) }}</p>
+                <p class="ig-bio-text">{{ user.bio or 'Lifting hard, tracking smart.' }}</p>
+                <p class="ig-bio-meta">{{ icon('mail','icon-xs') }} {{ user.email }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- IG-STYLE TABS -->
+    <nav class="ig-tabs" role="tablist" aria-label="Profile sections">
+        <button class="ig-tab active" role="tab" aria-selected="true" onclick="showSection('profile', this)">{{ icon('user','icon-sm') }} Profile Info</button>
+        <button class="ig-tab" role="tab" aria-selected="false" onclick="showSection('stats', this)">{{ icon('bar-chart-2','icon-sm') }} My Stats</button>
+        <button class="ig-tab" role="tab" aria-selected="false" onclick="showSection('security', this)">{{ icon('shield','icon-sm') }} Security</button>
+        <button class="ig-tab" role="tab" aria-selected="false" onclick="showSection('goals', this)">{{ icon('target','icon-sm') }} Fitness Goals</button>
+        <button class="ig-tab" role="tab" aria-selected="false" onclick="showSection('account', this)">{{ icon('settings','icon-sm') }} Account</button>
+    </nav>
+
+    <div class="ig-content">
+
+        <!-- ── PROFILE INFO ── -->
+        <section class="settings-section active" id="section-profile">
+            <div class="settings-section-header">
+                <h2>Profile Information</h2>
+                <p>Update your personal details</p>
+            </div>
+            <form method="POST" action="/profile/update" class="settings-form" enctype="multipart/form-data">
+                <input type="file" name="avatar" id="avatarInput" accept="image/*" hidden onchange="previewAvatar(event)">
+                <div class="settings-form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <div class="input-wrap">
+                            {{ icon('user','icon-input') }}
+                            <input type="text" name="first_name" class="text-input"
+                                style="padding-left:2.5rem"
+                                value="{{ user.get('first_name') or user.name.split()[0] }}" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <div class="input-wrap">
+                            {{ icon('user','icon-input') }}
+                            <input type="text" name="last_name" class="text-input"
+                                style="padding-left:2.5rem"
+                                value="{{ user.get('last_name') or (user.name.split(' ',1)[1] if ' ' in user.name else '') }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-form-row">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <div class="input-wrap">
+                            {{ icon('at-sign','icon-input') }}
+                            <input type="text" name="username" class="text-input"
+                                style="padding-left:2.5rem"
+                                value="{{ user.get('username','') }}" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <div class="input-wrap">
+                            {{ icon('mail','icon-input') }}
+                            <input type="email" name="email" class="text-input"
+                                style="padding-left:2.5rem"
+                                value="{{ user.email }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-form-row">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <div class="input-wrap">
+                            {{ icon('phone','icon-input') }}
+                            <input type="tel" name="phone" class="text-input"
+                                style="padding-left:2.5rem"
+                                placeholder="+92 300 1234567"
+                                value="{{ user.phone or '' }}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Member Since</label>
+                        <input type="text" class="text-input"
+                            value="{{ user.created_at[:10] }}" disabled
+                            style="opacity:0.5; cursor:not-allowed;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Bio <span style="color:var(--g3);font-weight:400">(optional)</span></label>
+                    <textarea name="bio" class="text-input settings-textarea"
+                        placeholder="Tell something about yourself...">{{ user.bio or '' }}</textarea>
+                </div>
+                <input type="hidden" name="fitness_goal" value="{{ user.fitness_goal or '' }}">
+                <div class="settings-form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── MY STATS ── -->
+        <section class="settings-section" id="section-stats">
+            <div class="settings-section-header">
+                <h2>My Stats</h2>
+                <p>Your fitness performance at a glance</p>
+            </div>
+            <div class="settings-stats-grid">
+                <div class="settings-stat-card accent">
+                    <span class="settings-stat-number">{{ streak }}</span>
+                    <span class="settings-stat-label">{{ icon('flame','icon-xs') }} Day Streak</span>
+                </div>
+                <div class="settings-stat-card">
+                    <span class="settings-stat-number">{{ history_count }}</span>
+                    <span class="settings-stat-label">{{ icon('check-circle','icon-xs') }} Exercises Done</span>
+                </div>
+                <div class="settings-stat-card">
+                    <span class="settings-stat-number">{{ stats.percent }}%</span>
+                    <span class="settings-stat-label">{{ icon('bar-chart-2','icon-xs') }} Completion Rate</span>
+                </div>
+                <div class="settings-stat-card">
+                    <span class="settings-stat-number">{{ stats.completed }}</span>
+                    <span class="settings-stat-label">{{ icon('activity','icon-xs') }} Completed Today</span>
+                </div>
+            </div>
+            <div class="settings-progress-wrap">
+                <div class="settings-progress-label">
+                    <span>Overall Progress</span>
+                    <span>{{ stats.percent }}%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width:{{ stats.percent }}%"></div>
+                </div>
+            </div>
+            <div class="settings-actions-row">
+                <a href="/summary" class="btn btn-outline">View Full Summary</a>
+                <a href="/history" class="btn btn-ghost">View History</a>
+            </div>
+        </section>
+
+        <!-- ── SECURITY ── -->
+        <section class="settings-section" id="section-security">
+            <div class="settings-section-header">
+                <h2>Security</h2>
+                <p>Manage your password and account security</p>
+            </div>
+
+            <div class="settings-info-row">
+                <span class="settings-info-icon">{{ icon('mail','icon-md') }}</span>
+                <div>
+                    <p class="settings-info-title">Email Address</p>
+                    <p class="settings-info-value">{{ user.email }}</p>
+                </div>
+                {% if user.is_verified %}
+                <span class="settings-badge">Verified</span>
+                {% else %}
+                <span class="settings-badge unverified">Not Verified</span>
+                {% endif %}
+            </div>
+
+            {% if not user.is_verified %}
+            <div class="settings-verify-prompt">
+                <p>Your email isn't verified yet. Verify it to secure your account.</p>
+                <form method="POST" action="/resend-verification">
+                    <button type="submit" class="btn btn-outline btn-sm">Resend Verification Email</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-sub-title">Change Password</h3>
+            <form method="POST" action="/profile/change-password" class="settings-form" onsubmit="return validatePasswordMatch(this)">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <div class="input-wrap">
+                        {{ icon('lock','icon-input') }}
+                        <input type="password" name="current_password" class="text-input"
+                            style="padding-left:2.5rem"
+                            placeholder="Your current password" required maxlength="128">
+                    </div>
+                </div>
+                <div class="settings-form-row">
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <div class="input-wrap">
+                            {{ icon('key','icon-input') }}
+                            <input type="password" name="new_password" class="text-input"
+                                style="padding-left:2.5rem"
+                                placeholder="Min 6 characters" required maxlength="128">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <div class="input-wrap">
+                            {{ icon('key','icon-input') }}
+                            <input type="password" name="confirm_password" class="text-input"
+                                style="padding-left:2.5rem"
+                                placeholder="Repeat new password" required maxlength="128">
+                        </div>
+                    </div>
+                </div>
+                <div class="field-error" id="pwMatchError" style="display:none">Passwords do not match</div>
+                <div class="settings-form-actions">
+                    <button type="submit" class="btn btn-primary">Update Password</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── FITNESS GOALS ── -->
+        <section class="settings-section" id="section-goals">
+            <div class="settings-section-header">
+                <h2>Fitness Goals</h2>
+                <p>Set your primary fitness objective</p>
+            </div>
+            <form method="POST" action="/profile/update" class="settings-form">
+                <input type="hidden" name="first_name" value="{{ user.get('first_name') or user.name.split()[0] }}">
+                <input type="hidden" name="last_name"  value="{{ user.get('last_name') or (user.name.split(' ',1)[1] if ' ' in user.name else '') }}">
+                <input type="hidden" name="username" value="{{ user.get('username','') }}">
+                <input type="hidden" name="email" value="{{ user.email }}">
+                <input type="hidden" name="phone" value="{{ user.phone or '' }}">
+                <input type="hidden" name="bio"   value="{{ user.bio or '' }}">
+
+                <div class="goals-grid">
+                    {% set goals = [
+                        ('Build Muscle', 'dumbbell', 'Gain size and strength through progressive overload'),
+                        ('Lose Weight', 'flame', 'Burn fat and improve body composition'),
+                        ('Improve Endurance', 'activity', 'Build cardiovascular fitness and stamina'),
+                        ('Stay Active', 'zap', 'Maintain health and consistent workout habits'),
+                        ('Increase Flexibility', 'wind', 'Improve mobility and reduce injury risk'),
+                        ('Athletic Performance', 'trophy', 'Enhance speed, power and sport-specific fitness')
+                    ] %}
+                    {% for goal, goal_icon, desc in goals %}
+                    <label class="goal-card {% if user.fitness_goal == goal %}selected{% endif %}" tabindex="0" role="radio" aria-checked="{{ 'true' if user.fitness_goal == goal else 'false' }}" onkeydown="if(event.key==='Enter'||event.key===' ')this.click();event.preventDefault()">
+                        <input type="radio" name="fitness_goal" value="{{ goal }}"
+                            {% if user.fitness_goal == goal %}checked{% endif %}
+                            class="sr-only">
+                        <span class="goal-icon">{{ icon(goal_icon, "icon-md") }}</span>
+                        <span class="goal-title">{{ goal }}</span>
+                        <span class="goal-desc">{{ desc }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="settings-form-actions">
+                    <button type="submit" class="btn btn-primary">Save Goal</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── ACCOUNT ── -->
+        <section class="settings-section" id="section-account">
+            <div class="settings-section-header">
+                <h2>Account</h2>
+                <p>Manage your account actions</p>
+            </div>
+
+            <div class="settings-account-item">
+                <div>
+                    <p class="settings-account-title">Log Out</p>
+                    <p class="settings-account-desc">Sign out of your IronTrack account on this device.</p>
+                </div>
+                <a href="/logout" class="btn btn-outline">Log Out</a>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-account-item">
+                <div>
+                    <p class="settings-account-title">Reset All Progress</p>
+                    <p class="settings-account-desc">Reset all your workout progress. Your plan and history are kept.</p>
+                </div>
+                <form method="POST" action="/reset_all_progress"
+                    onsubmit="return confirm('Reset ALL progress? This cannot be undone.')">
+                    <button type="submit" class="btn btn-danger">Reset Progress</button>
+                </form>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-account-item">
+                <div>
+                    <p class="settings-account-title">Deactivate Account</p>
+                    <p class="settings-account-desc">Temporarily disable your account. Your workouts and progress stay safe until you reactivate.</p>
+                </div>
+                <button type="button" class="btn btn-ghost" onclick="openDeactivateModal()">Deactivate</button>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-account-item">
+                <div>
+                    <p class="settings-account-title">Delete Account</p>
+                    <p class="settings-account-desc">Request permanent deletion. Account and data are erased after a 30-day grace period. Within it you can restore.</p>
+                </div>
+                <button type="button" class="btn btn-danger" onclick="openDeleteModal()">Delete Account</button>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<!-- ── DEACTIVATE MODAL ── -->
+<div class="modal-overlay" id="deactivateModal" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true">
+        <h3>Deactivate Account?</h3>
+        <p>Your workouts, progress and history are kept safely. You can reactivate any time by logging back in, we'll also email you a reactivation link.</p>
+        <form method="POST" action="/account/deactivate">
+            <select name="reason" class="text-input" style="width:100%">
+                <option value="">Select a reason (optional)</option>
+                {% for r in reasons %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+            </select>
+            <div class="modal-actions" style="margin-top:1rem">
+                <button type="button" class="btn btn-ghost" onclick="closeDeactivateModal()">Cancel</button>
+                <button type="submit" class="btn btn-danger">Deactivate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── DELETE ACCOUNT MODAL ── -->
+<div class="modal-overlay" id="deleteModal" style="display:none">
+    <div class="modal modal-lg" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" onclick="closeDeleteModal()" aria-label="Close">×</button>
+
+        <!-- Step 1: email verification -->
+        <div id="deleteStep1">
+            <h3>Verify It's You</h3>
+            <p>We'll send a 6-digit code to <b style="color:var(--white)">{{ user.email }}</b> before you can continue.</p>
+            <div class="delete-hint" id="deleteCodeSent" style="display:none">
+                {{ icon('mail','icon-sm') }} Code sent! Enter it below.
+            </div>
+            <input
+                type="text" id="deleteCodeInput" class="text-input delete-code-input"
+                placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter')verifyDeleteCode()">
+            <div class="field-error" id="deleteCodeError" style="display:none"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" id="deleteSendCodeBtn" class="btn btn-primary" onclick="sendDeleteCode()">Send Code</button>
+                <button type="button" id="deleteVerifyBtn" class="btn btn-primary" style="display:none" onclick="verifyDeleteCode()">Verify</button>
+            </div>
+        </div>
+
+        <!-- Step 2: reasons -->
+        <div id="deleteStep2" style="display:none">
+            <h3>Tell Us Why You're Leaving</h3>
+            <p>Your feedback helps improve IronTrack. This step is optional.</p>
+            <div class="reason-options">
+                {% for r in reasons %}
+                <label class="reason-option">
+                    <input type="radio" name="delete_reason" value="{{ r }}" {% if loop.first %}checked{% endif %}>
+                    <span>{{ r }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" onclick="goDeleteStep(1)">Back</button>
+                <button type="button" class="btn btn-primary" onclick="goDeleteStep(3)">Continue</button>
+            </div>
+        </div>
+
+        <!-- Step 3: final warning -->
+        <div id="deleteStep3" style="display:none">
+            <h3>This Can't Be Undone</h3>
+            <div class="delete-warning-box">
+                <ul>
+                    <li>Your account is scheduled for <b>permanent deletion</b>.</li>
+                    <li>All data is erased after <b>30 days</b>.</li>
+                    <li>Until then you can restore it, we'll email you a restore link.</li>
+                </ul>
+            </div>
+            <label class="reason-option confirm-option">
+                <input type="checkbox" id="deleteConfirmCheck">
+                <span>I understand that my account will be permanently deleted after 30 days.</span>
+            </label>
+            <div class="field-error" id="deleteConfirmError" style="display:none">Please confirm to continue.</div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" onclick="goDeleteStep(2)">Back</button>
+                <button type="button" id="deleteFinalBtn" class="btn btn-danger" onclick="confirmDelete()">Delete My Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewAvatar(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    var headerAvatar = document.querySelector('.ig-avatar-img');
+    if (headerAvatar) {
+        headerAvatar.src = url;
+    } else {
+        var initials = document.querySelector('.ig-avatar-initials');
+        if (initials) {
+            var img = document.createElement('img');
+            img.className = 'ig-avatar ig-avatar-img';
+            img.alt = 'Preview';
+            img.src = url;
+            initials.replaceWith(img);
+        }
+    }
+}
+function showSection(id, el, scrollToTop) {
+    var scrollIt = !!scrollToTop;
+    document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.ig-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+    });
+    document.getElementById('section-' + id).classList.add('active');
+    if (el) {
+        el.classList.add('active');
+        el.setAttribute('aria-selected', 'true');
+    }
+    if (event && event.preventDefault) event.preventDefault();
+    if (scrollIt) window.scrollTo({ top: 80, behavior: 'smooth' });
+}
+
+// Password match validation
+function validatePasswordMatch(form) {
+    const newPW = form.querySelector('input[name="new_password"]');
+    const confPW = form.querySelector('input[name="confirm_password"]');
+    const errEl = document.getElementById('pwMatchError');
+    if (newPW.value !== confPW.value) {
+        errEl.style.display = 'flex';
+        confPW.focus();
+        return false;
+    }
+    errEl.style.display = 'none';
+    return true;
+}
+
+// Goal card selection
+document.querySelectorAll('.goal-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.goal-card').forEach(c => {
+            c.classList.remove('selected');
+            c.setAttribute('aria-checked', 'false');
+        });
+        card.classList.add('selected');
+        card.setAttribute('aria-checked', 'true');
+        card.querySelector('input[type=radio]').checked = true;
+    });
+});
+
+// ── DEACTIVATE MODAL ──
+function openDeactivateModal() {
+    document.getElementById('deactivateModal').style.display = 'flex';
+}
+function closeDeactivateModal() {
+    document.getElementById('deactivateModal').style.display = 'none';
+}
+
+// ── DELETE ACCOUNT MODAL (3 steps) ──
+function resetDeleteFlow() {
+    ['deleteStep1', 'deleteStep2', 'deleteStep3'].forEach(id => {
+        document.getElementById(id).style.display = id === 'deleteStep1' ? 'block' : 'none';
+    });
+    const inp = document.getElementById('deleteCodeInput');
+    if (inp) inp.value = '';
+    document.getElementById('deleteCodeError').style.display = 'none';
+    document.getElementById('deleteCodeSent').style.display = 'none';
+    document.getElementById('deleteSendCodeBtn').style.display = 'inline-flex';
+    document.getElementById('deleteVerifyBtn').style.display = 'none';
+    document.getElementById('deleteConfirmCheck').checked = false;
+    document.getElementById('deleteConfirmError').style.display = 'none';
+}
+
+function openDeleteModal() {
+    resetDeleteFlow();
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+
+async function sendDeleteCode() {
+    const btn = document.getElementById('deleteSendCodeBtn');
+    const err = document.getElementById('deleteCodeError');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    err.style.display = 'none';
+    try {
+        const res = await fetch('/account/delete/request-code', { method: 'POST' });
+        const data = await res.json();
+        if (data.error) {
+            err.textContent = data.error;
+            err.style.display = 'flex';
+        } else {
+            document.getElementById('deleteCodeSent').style.display = 'flex';
+            btn.style.display = 'none';
+            document.getElementById('deleteVerifyBtn').style.display = 'inline-flex';
+            document.getElementById('deleteCodeInput').focus();
+        }
+    } catch (e) {
+        err.textContent = 'Something went wrong. Please try again.';
+        err.style.display = 'flex';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send Code';
+}
+
+async function verifyDeleteCode() {
+    const code = document.getElementById('deleteCodeInput').value.trim();
+    const err = document.getElementById('deleteCodeError');
+    if (code.length !== 6) {
+        err.textContent = 'Enter the 6-digit code from your email.';
+        err.style.display = 'flex';
+        return;
+    }
+    const btn = document.getElementById('deleteVerifyBtn');
+    btn.disabled = true;
+    err.style.display = 'none';
+    try {
+        const res = await fetch('/account/delete/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (data.error) {
+            err.textContent = data.error;
+            err.style.display = 'flex';
+        } else {
+            goDeleteStep(2);
+        }
+    } catch (e) {
+        err.textContent = 'Something went wrong. Please try again.';
+        err.style.display = 'flex';
+    }
+    btn.disabled = false;
+}
+
+function goDeleteStep(step) {
+    ['deleteStep1', 'deleteStep2', 'deleteStep3'].forEach(id => {
+        document.getElementById(id).style.display = id === 'deleteStep' + step ? 'block' : 'none';
+    });
+}
+
+async function confirmDelete() {
+    const ok = document.getElementById('deleteConfirmCheck').checked;
+    const err = document.getElementById('deleteConfirmError');
+    if (!ok) {
+        err.style.display = 'flex';
+        return;
+    }
+    err.style.display = 'none';
+    const btn = document.getElementById('deleteFinalBtn');
+    btn.disabled = true;
+    btn.textContent = 'Scheduling...';
+    const reasonInput = document.querySelector('input[name="delete_reason"]:checked');
+    const reason = reasonInput ? reasonInput.value : '';
+    try {
+        const res = await fetch('/account/delete/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            window.location.href = '/account/account-status';
+        } else {
+            alert(data.error || 'Something went wrong.');
+        }
+    } catch (e) {
+        alert('Something went wrong. Please try again.');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Delete My Account';
+}
+
+// Close modals when clicking the backdrop
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.style.display = 'none';
+    });
+});
+</script>
+{% endblock %}

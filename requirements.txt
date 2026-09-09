@@ -1,0 +1,10 @@
+flask
+flask-login
+flask-mail
+werkzeug
+groq
+python-dotenv
+gunicorn
+authlib
+requests
+flask-limiter

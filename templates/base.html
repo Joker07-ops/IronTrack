@@ -1,0 +1,679 @@
+{% from '_icons.html' import icon %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+
+    {# ═══════════ SEO ═══════════ #}
+    <title>{% block title %}IronTrack | Free Workout Tracker & AI Fitness Assistant{% endblock %}</title>
+    <meta name="description" content="{% block seo_description %}Track workouts, log gym exercises, build consistent plans and get AI fitness coaching with IronTrack — the free workout tracker, exercise library and health calculator.{% endblock %}">
+    <meta name="keywords" content="workout tracker, gym tracker, fitness tracker, exercise log, workout planner, gym log, AI fitness assistant, workout plan, BMI calculator, track workouts online, free workout app">
+    <meta name="author" content="IronTrack">
+    <meta name="robots" content="{% block seo_robots %}index, follow{% endblock %}">
+    <link rel="canonical" href="{{ site_base }}{{ request.path }}">
+
+    <meta name="application-name" content="IronTrack">
+    <meta name="theme-color" content="#040404">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f1f1">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    {# Apple / PWA #}
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IronTrack">
+
+    {# Open Graph #}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IronTrack">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="{{ site_base }}{{ request.path }}">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{% block og_description %}{{ self.seo_description() }}{% endblock %}">
+    <meta property="og:image" content="{{ site_base }}{{ url_for('static', filename='logo.svg') }}">
+    <meta property="og:image:type" content="image/svg+xml">
+
+    {# Twitter Card #}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ self.title() }}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ self.seo_description() }}{% endblock %}">
+    <meta name="twitter:image" content="{{ site_base }}{{ url_for('static', filename='logo.svg') }}">
+
+    {# Structured data — WebSite + Organization #}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "{{ site_base }}/#website",
+                "name": "IronTrack",
+                "alternateName": "IronTrack Workout Tracker",
+                "url": "{{ site_base }}/",
+                "description": "Free online workout tracker, gym exercise log and AI fitness assistant with plans, progress history and health calculators.",
+                "publisher": { "@id": "{{ site_base }}/#organization" },
+                "inLanguage": "en"
+            },
+            {
+                "@type": "Organization",
+                "@id": "{{ site_base }}/#organization",
+                "name": "IronTrack",
+                "url": "{{ site_base }}/",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "{{ site_base }}{{ url_for('static', filename='logo.svg') }}"
+                }
+            }
+        ]
+    }
+    </script>
+
+    {# Structured data — Breadcrumbs (skipped on the home page) #}
+    {% if request.endpoint and request.endpoint != 'home' %}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_base }}/"},
+            {"@type": "ListItem", "position": 2, "name": "{{ self.title()|striptags }}", "item": "{{ site_base }}{{ request.path }}"}
+        ]
+    }
+    </script>
+    {% endif %}
+
+    <script>
+        // Runs synchronously before first paint — sets the theme
+        // attribute immediately so the loader (and rest of the page)
+        // never flashes the wrong theme's colors.
+        (function() {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Critical inline CSS — loader must paint before any external
+           stylesheet finishes loading, so it covers the page instantly
+           with zero flash. Theme-aware via the attribute set above,
+           with hardcoded fallback colors (not CSS vars) since tokens.css
+           may not have finished downloading at first paint. */
+        #pageLoader {
+            position: fixed; inset: 0; z-index: 99999;
+            background: #040404;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 1;
+        }
+        html[data-theme="light"] #pageLoader { background: #f1f1f1; }
+        #pageLoader.fade-out {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        #pageLoaderAnim { width: 84px; height: 84px; }
+    </style>
+</head>
+<body>
+
+<!-- SKIP TO MAIN CONTENT -->
+<a href="#main-content" class="sr-only" style="position:absolute;top:0;left:0;padding:0.75rem 1.5rem;background:var(--lime);color:#000;z-index:100001;transform:translateY(-100%);">
+    Skip to main content
+</a>
+<style>
+    .sr-only:focus { position:fixed !important; width:auto !important; height:auto !important; clip:auto !important; transform:translateY(0) !important; margin:0 !important; }
+</style>
+
+<!-- PAGE LOADER — first element in body, fully opaque, no fade-in.
+     Only fades OUT once the page has finished loading. This guarantees
+     it never overlaps semi-transparently with page content underneath. -->
+<div id="pageLoader"><div id="pageLoaderAnim"></div></div>
+
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="noise-overlay"></div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<!-- GUEST BANNER -->
+{% if session.get('guest') and not current_user.is_authenticated %}
+<div class="guest-banner">
+    <span>{{ icon('eye','icon-xs') }} Guest mode: Your activity will not be saved.</span>
+    <div class="guest-banner-actions">
+        <a href="/register" class="guest-banner-btn">Create Account</a>
+        <a href="/login" class="guest-banner-link">Log In</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- VERIFY EMAIL BANNER -->
+{% if current_user.is_authenticated and not current_user.is_verified %}
+<div class="guest-banner verify-banner">
+    <span>{{ icon('mail','icon-xs') }} Please verify your email check your inbox.</span>
+    <div class="guest-banner-actions">
+        <form method="POST" action="/resend-verification" style="display:inline;">
+            <button type="submit" class="guest-banner-btn">Resend Email</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+    <a href="/" class="nav-logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="IronTrack" class="nav-logo-img">
+        <span class="nav-logo-iron">IRON</span><span class="nav-logo-track">TRACK</span>
+    </a>
+
+    <ul class="nav-links">
+        <li><a href="/" class="{{ 'active' if request.path == '/' }}" {% if request.path == '/' %}aria-current="page"{% endif %}>Home</a></li>
+        <li><a href="/workout" class="{{ 'active' if request.path == '/workout' }}" {% if request.path == '/workout' %}aria-current="page"{% endif %}>Workout</a></li>
+        <li><a href="/bmi" class="{{ 'active' if request.path == '/bmi' }}" {% if request.path == '/bmi' %}aria-current="page"{% endif %}>Health</a></li>
+        <li><a href="/summary" class="{{ 'active' if request.path == '/summary' }}" {% if request.path == '/summary' %}aria-current="page"{% endif %}>Summary</a></li>
+        <li><a href="/history" class="{{ 'active' if request.path == '/history' }}" {% if request.path == '/history' %}aria-current="page"{% endif %}>History</a></li>
+        <li><a href="/about" class="{{ 'active' if request.path == '/about' }}" {% if request.path == '/about' %}aria-current="page"{% endif %}>About</a></li>
+        {% if is_admin %}
+        <li><a href="/admin/feedback" class="{{ 'active' if request.path.startswith('/admin') }}" {% if request.path.startswith('/admin') %}aria-current="page"{% endif %}>Admin</a></li>
+        {% endif %}
+        <li>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                <span class="icon-moon">{{ icon('moon','icon-sm') }}</span>
+                <span class="icon-sun" style="display:none;">{{ icon('sun','icon-sm') }}</span>
+            </button>
+        </li>
+        {% if current_user.is_authenticated %}
+        <li class="nav-user">
+            <a href="/profile" class="nav-user-name">
+                {% if current_user.avatar %}
+                <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="" class="nav-user-avatar">
+                {% else %}
+                {{ icon('user','icon-xs') }} {{ (current_user.first_name or current_user.name)[0].upper() }}{{ ((current_user.last_name or (current_user.name.split(' ',1)[1] if ' ' in current_user.name else ''))[:1]).upper() }}
+                {% endif %}
+            </a>
+            <a href="/logout" class="btn btn-nav-logout btn-sm">Logout</a>
+        </li>
+        {% elif session.get('guest') %}
+        <li class="nav-user">
+            <a href="/register" class="btn btn-primary btn-sm">Sign Up</a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="nav-mobile-controls">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <span class="icon-moon">{{ icon('moon','icon-sm') }}</span>
+            <span class="icon-sun" style="display:none;">{{ icon('sun','icon-sm') }}</span>
+        </button>
+        <button class="nav-burger" id="navBurger" onclick="toggleMobileMenu()" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- MOBILE MENU OVERLAY -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+
+<!-- MOBILE MENU DRAWER -->
+<div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+        <span class="mobile-menu-title">MENU</span>
+        <button class="mobile-menu-close" onclick="closeMobileMenu()">{{ icon('x','icon-sm') }}</button>
+    </div>
+    {% if current_user.is_authenticated %}
+    <a href="/profile" class="mobile-menu-user">
+        {% if current_user.avatar %}
+        <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="" class="mobile-menu-avatar mobile-menu-avatar-img">
+        {% else %}
+        <span class="mobile-menu-avatar">{{ (current_user.first_name or current_user.name)[0].upper() }}{{ ((current_user.last_name or (current_user.name.split(' ',1)[1] if ' ' in current_user.name else ''))[:1]).upper() }}</span>
+        {% endif %}
+        <div>
+            <p class="mobile-menu-user-name">{{ (current_user.first_name or current_user.name) ~ ((' ' + current_user.last_name) if current_user.last_name else '') }}</p>
+            <p class="mobile-menu-user-sub">View Profile</p>
+        </div>
+    </a>
+    {% endif %}
+    <ul class="mobile-menu-links">
+        <li><a href="/" class="{{ 'active' if request.path == '/' }}" {% if request.path == '/' %}aria-current="page"{% endif %}>{{ icon('home','icon-sm') }} Home</a></li>
+        <li><a href="/workout" class="{{ 'active' if request.path == '/workout' }}" {% if request.path == '/workout' %}aria-current="page"{% endif %}>{{ icon('dumbbell','icon-sm') }} Workout</a></li>
+        <li><a href="/templates" class="{{ 'active' if request.path == '/templates' }}" {% if request.path == '/templates' %}aria-current="page"{% endif %}>{{ icon('layout-list','icon-sm') }} Templates</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="/profile" class="{{ 'active' if request.path == '/profile' }}" {% if request.path == '/profile' %}aria-current="page"{% endif %}>{{ icon('user','icon-sm') }} Profile</a></li>
+        {% endif %}
+        <li><a href="/bmi" class="{{ 'active' if request.path == '/bmi' }}" {% if request.path == '/bmi' %}aria-current="page"{% endif %}>{{ icon('scale','icon-sm') }} Health Calculator</a></li>
+        <li><a href="/summary" class="{{ 'active' if request.path == '/summary' }}" {% if request.path == '/summary' %}aria-current="page"{% endif %}>{{ icon('bar-chart-2','icon-sm') }} Summary</a></li>
+        <li><a href="/history" class="{{ 'active' if request.path == '/history' }}" {% if request.path == '/history' %}aria-current="page"{% endif %}>{{ icon('history','icon-sm') }} History</a></li>
+        <li><a href="/about" class="{{ 'active' if request.path == '/about' }}" {% if request.path == '/about' %}aria-current="page"{% endif %}>{{ icon('compass','icon-sm') }} About</a></li>
+        {% if is_admin %}
+        <li><a href="/admin/feedback" class="{{ 'active' if request.path.startswith('/admin') }}" {% if request.path.startswith('/admin') %}aria-current="page"{% endif %}>{{ icon('settings','icon-sm') }} Feedback Inbox</a></li>
+        {% endif %}
+    </ul>
+    <div class="mobile-menu-footer">
+        {% if current_user.is_authenticated %}
+        <a href="/logout" class="btn btn-nav-logout btn-full">Logout</a>
+        {% elif session.get('guest') %}
+        <a href="/register" class="btn btn-primary btn-full">Sign Up Free</a>
+        <a href="/login" class="btn btn-ghost btn-full" style="margin-top:0.5rem;">Log In</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MAIN -->
+<main class="main-content" id="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, msg in messages %}
+            <div class="flash-message flash-{{ category or 'info' }}">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-logo-wrap">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="IronTrack" width="32" height="32">
+            <span class="footer-logo">IRON<span>TRACK</span></span>
+        </div>
+        <p>Stay consistent. Progress comes with discipline.</p>
+
+        <div class="footer-contact">
+            <a href="mailto:support@irontrack.app">{{ icon('mail','icon-xs') }} support@irontrack.app</a>
+            <span class="footer-contact-sep">&middot;</span>
+            <a href="/about#give-feedback">{{ icon('clipboard-list','icon-xs') }} Send Feedback</a>
+            <span class="footer-contact-sep">&middot;</span>
+            <a href="/assistant">{{ icon('bot','icon-xs') }} AI Assistant</a>
+        </div>
+
+        <nav class="footer-links" aria-label="Footer">
+            <a href="/">Home</a>
+            <a href="/workout">Workout</a>
+            <a href="/templates">Templates</a>
+            <a href="/bmi">Health Calculator</a>
+            <a href="/assistant">AI Assistant</a>
+            <a href="/summary">Summary</a>
+            <a href="/history">History</a>
+            <a href="/about">About</a>
+        </nav>
+        <p class="footer-copy">&copy; {{ now.year }} IronTrack &middot; Built for Athletes</p>
+    </div>
+</footer>
+
+<!-- FLOATING CHAT -->
+<div class="float-bubble" id="floatBubble" onclick="toggleFloatChat()" title="Ask IronBot">
+    {{ icon('bot','icon-float') }}
+    <div class="float-bubble-ring"></div>
+</div>
+<div class="float-chat" id="floatChat">
+    <div class="float-chat-header">
+        <a href="/assistant" class="float-chat-header-info" title="Open full IronBot chat">
+            <span class="float-chat-avatar">{{ icon('bot','icon-md') }}</span>
+            <div>
+                <p class="float-chat-name">IronBot</p>
+                <p class="float-chat-status"><span class="status-dot"></span> Online &middot; Tap to open</p>
+            </div>
+        </a>
+        <button onclick="toggleFloatChat()" class="float-close" title="Close">{{ icon('x','icon-sm') }}</button>
+    </div>
+    <div class="float-chat-messages" id="floatMessages">
+        <div class="chat-message bot">
+            <div class="chat-avatar">{{ icon('bot','icon-sm') }}</div>
+            <div class="chat-bubble">Hi! Ask me any fitness question.</div>
+        </div>
+    </div>
+    <div class="float-chat-suggestions" id="floatSuggestions">
+        <button class="float-suggestion-chip" onclick="sendFloatSuggestion(this)">Best exercises for abs?</button>
+        <button class="float-suggestion-chip" onclick="sendFloatSuggestion(this)">How long should I rest between sets?</button>
+        <button class="float-suggestion-chip" onclick="sendFloatSuggestion(this)">Protein intake for muscle gain?</button>
+    </div>
+    <div class="float-chat-input">
+        <input type="text" id="floatInput" placeholder="Ask IronBot..."
+            onkeydown="if(event.key==='Enter') sendFloatMessage()" autocomplete="off">
+        <button onclick="sendFloatMessage()" id="floatSendBtn">{{ icon('send','icon-sm') }}</button>
+    </div>
+</div>
+
+<script>
+// ── REGISTER SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/static/sw.js').catch(function(err) {
+            console.warn('SW registration failed:', err);
+        });
+    });
+}
+</script>
+
+<script src="{{ url_for('static', filename='lottie/lottie.min.js') }}"></script>
+<script>
+// ── PAGE LOADER ──
+// Plays the local Lottie animation while the page loads, then fades
+// out smoothly once everything (images, fonts, scripts) is ready.
+// Self-hosted: no CDN, no external network request.
+(function() {
+    try {
+        lottie.loadAnimation({
+            container: document.getElementById('pageLoaderAnim'),
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            path: "{{ url_for('static', filename='lottie/loader.json') }}"
+        });
+    } catch (e) {
+        // If Lottie fails for any reason, the loader still hides on
+        // window.load below — the page just won't have the animation.
+        console.warn('Loader animation failed to init:', e);
+    }
+})();
+
+function hidePageLoader() {
+    const loader = document.getElementById('pageLoader');
+    if (!loader) return;
+    loader.classList.add('fade-out');
+    setTimeout(() => loader.remove(), 320);
+}
+
+// Hide once the full page (styles, images, fonts) has loaded.
+if (document.readyState === 'complete') {
+    hidePageLoader();
+} else {
+    window.addEventListener('load', hidePageLoader);
+    // Safety net: never block the page for more than 2.5s even on a
+    // slow connection — hide regardless if load takes too long.
+    setTimeout(hidePageLoader, 2500);
+}
+</script>
+
+<script>
+// ── CURSOR GLOW (only on fine pointer, no reduced motion) ──
+const glow = document.getElementById('cursorGlow');
+const prefersFinePointer = window.matchMedia('(pointer: fine)').matches;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (glow && prefersFinePointer && !prefersReducedMotion) {
+    document.addEventListener('mousemove', e => {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top  = e.clientY + 'px';
+    });
+} else if (glow) {
+    glow.style.display = 'none';
+}
+
+// ── NAVBAR SCROLL ──
+window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// ── MOBILE MENU ──
+function toggleMobileMenu() {
+    const menu    = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const burger  = document.getElementById('navBurger');
+    const isOpen  = menu.classList.contains('open');
+    menu.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('open', !isOpen);
+    burger.classList.toggle('open', !isOpen);
+    document.body.classList.toggle('menu-open', !isOpen);
+}
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('mobileMenuOverlay').classList.remove('open');
+    document.getElementById('navBurger').classList.remove('open');
+    document.body.classList.remove('menu-open');
+}
+document.querySelectorAll('.mobile-menu-links a, .mobile-menu-user, .mobile-menu-footer a').forEach(l => {
+    l.addEventListener('click', closeMobileMenu);
+});
+
+// ── NAVIGATION ──
+// Plain instant navigation — no transition overlay, no animation.
+// Kept as a function because workout.html calls navigateTo() for
+// clickable exercise rows.
+function navigateTo(href) {
+    window.location.href = href;
+}
+
+// ── THEME ──
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    updateThemeIcons(!isDark);
+    document.dispatchEvent(new CustomEvent('themechange'));
+}
+function updateThemeIcons(isDark) {
+    document.querySelectorAll('.icon-moon').forEach(el => el.style.display = isDark ? '' : 'none');
+    document.querySelectorAll('.icon-sun').forEach(el  => el.style.display = isDark ? 'none' : '');
+}
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+document.addEventListener('DOMContentLoaded', () => updateThemeIcons(savedTheme === 'dark'));
+
+// ── FLOAT CHAT (auto-minimize on scroll) ──
+let floatChatTimeout = null;
+const floatBubbleEl = document.getElementById('floatBubble');
+const floatChatEl = document.getElementById('floatChat');
+
+function toggleFloatChat() {
+    const isOpen = floatChatEl.classList.contains('open');
+    floatChatEl.classList.toggle('open');
+    floatBubbleEl.classList.toggle('hidden', !isOpen);
+    if (!isOpen) document.getElementById('floatInput').focus();
+    // Reset auto-hide timer when manually opened
+    if (!isOpen) resetFloatChatTimer();
+}
+
+function resetFloatChatTimer() {
+    if (floatChatTimeout) clearTimeout(floatChatTimeout);
+    floatChatTimeout = setTimeout(() => {
+        if (floatChatEl.classList.contains('open')) {
+            toggleFloatChat();
+        }
+    }, 60000); // auto-minimize after 60s of inactivity
+}
+
+// On scroll: hide bubble, show when scrolling stops
+let scrollTimeout = null;
+window.addEventListener('scroll', function() {
+    if (!floatBubbleEl.classList.contains('hidden')) {
+        floatBubbleEl.style.opacity = '0.3';
+        floatBubbleEl.style.transition = 'opacity 0.3s';
+    }
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+        floatBubbleEl.style.opacity = '1';
+    }, 2000);
+}, { passive: true });
+
+// Chat opened: auto-hide after 60s
+document.addEventListener('DOMContentLoaded', resetFloatChatTimer);
+async function sendFloatMessage() {
+    const input   = document.getElementById('floatInput');
+    const message = input.value.trim();
+    if (!message) return;
+    const suggestions = document.getElementById('floatSuggestions');
+    if (suggestions) suggestions.style.display = 'none';
+    appendFloatMessage('user', message);
+    input.value = '';
+    const btn  = document.getElementById('floatSendBtn');
+    btn.disabled = true;
+    const msgs = document.getElementById('floatMessages');
+    const typing = document.createElement('div');
+    typing.className = 'chat-message bot iron-msg-in'; typing.id = 'floatTyping';
+    typing.innerHTML = '<div class="chat-bubble typing-dots"><span></span><span></span><span></span></div>';
+    msgs.appendChild(typing); msgs.scrollTop = msgs.scrollHeight;
+    try {
+        const body = { message };
+        const floatSessionId = localStorage.getItem('floatChatSession');
+        if (floatSessionId) body.session_id = floatSessionId;
+        const res  = await fetch('/assistant/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.session_id) localStorage.setItem('floatChatSession', data.session_id);
+        document.getElementById('floatTyping')?.remove();
+        appendFloatMessage('bot', data.reply || data.error);
+    } catch {
+        document.getElementById('floatTyping')?.remove();
+        appendFloatMessage('bot','Something went wrong.');
+    }
+    btn.disabled = false;
+}
+function sendFloatSuggestion(btn) {
+    document.getElementById('floatInput').value = btn.textContent;
+    sendFloatMessage();
+}
+function appendFloatMessage(role, text) {
+    const msgs = document.getElementById('floatMessages');
+    const div  = document.createElement('div'); div.className = `chat-message ${role} iron-msg-in`;
+    const bub  = document.createElement('div'); bub.className = 'chat-bubble'; bub.textContent = text;
+    div.appendChild(bub);
+    msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── KEYBOARD SHORTCUTS ──
+document.addEventListener('keydown', function(e) {
+    // Don't trigger when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.key === '?' || (e.key === '/' && !e.ctrlKey)) {
+        e.preventDefault();
+        showShortcutsModal();
+        return;
+    }
+    if (e.altKey) {
+        switch (e.key) {
+            case '1': case 'h': window.location.href = '/'; break;
+            case '2': case 'w': window.location.href = '/workout'; break;
+            case '3': case 'b': window.location.href = '/bmi'; break;
+            case '4': case 's': window.location.href = '/summary'; break;
+            case '5': case 'r': window.location.href = '/history'; break;
+            case 'p': window.location.href = '/profile'; break;
+        }
+    }
+});
+function showShortcutsModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+        '<div class="modal">' +
+        '<h3>Keyboard Shortcuts</h3>' +
+        '<div class="shortcut-grid">' +
+        '<span class="shortcut-key">Alt+H</span><span>Home</span>' +
+        '<span class="shortcut-key">Alt+W</span><span>Workout</span>' +
+        '<span class="shortcut-key">Alt+B</span><span>Health (BMI)</span>' +
+        '<span class="shortcut-key">Alt+S</span><span>Summary</span>' +
+        '<span class="shortcut-key">Alt+R</span><span>History</span>' +
+        '<span class="shortcut-key">Alt+P</span><span>Profile</span>' +
+        '<span class="shortcut-key">?</span><span>Show shortcuts</span>' +
+        '</div>' +
+        '<div class="modal-actions"><button class="btn btn-primary btn-full" onclick="this.closest(\'.modal-overlay\').remove()">Got it</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+// ── DAY TAB SCROLL AFFORDANCE ──
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.day-tabs').forEach(function(tabs) {
+        tabs.addEventListener('scroll', function() {
+            var atEnd = this.scrollLeft + this.clientWidth >= this.scrollWidth - 2;
+            this.classList.toggle('scrolled-end', atEnd);
+        });
+    });
+});
+
+// ── UNDO TOAST ──
+function showUndoToast(message, callback) {
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+    var t = document.createElement('div');
+    t.className = 'toast toast-info';
+    t.style.cursor = 'default';
+    var span = document.createElement('span');
+    span.style.flex = '1';
+    span.textContent = message;
+    t.appendChild(span);
+    var undoBtn = document.createElement('button');
+    undoBtn.textContent = 'Undo';
+    undoBtn.style.cssText = 'background:var(--lime);color:#000;border:none;border-radius:var(--r-sm);padding:0.25rem 0.75rem;font-weight:700;cursor:pointer;font-size:0.75rem;margin-left:0.75rem;white-space:nowrap;';
+    t.appendChild(undoBtn);
+    container.appendChild(t);
+    var timeout = setTimeout(function() {
+        t.classList.add('toast-out');
+        setTimeout(function() { t.remove(); }, 260);
+    }, 12000);
+    undoBtn.addEventListener('click', function() {
+        clearTimeout(timeout);
+        t.remove();
+        if (callback) callback();
+    });
+}
+
+// ── CONVERT FLASH MESSAGES TO TOASTS ──
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.flash-message').forEach(function(el) {
+        var msg = el.textContent.trim();
+        var type = 'info';
+        if (el.classList.contains('flash-success')) type = 'success';
+        else if (el.classList.contains('flash-error')) type = 'error';
+        showToast(msg, type);
+        el.remove();
+    });
+});
+
+// ── COUNTER ANIMATION ──
+document.querySelectorAll('.stat-number').forEach(el => {
+    const target = parseInt(el.textContent);
+    if (isNaN(target)) return;
+    let current = 0;
+    const step  = Math.ceil(target / 40);
+    const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = current;
+        if (current >= target) clearInterval(timer);
+    }, 28);
+});
+
+// ── TOAST NOTIFICATION ──
+function showToast(message, type) {
+    type = type || 'info';
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const icons = { success: 'check-circle', error: 'x-circle', info: 'alert-triangle' };
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="{{ url_for('static', filename='icons/sprite.svg') }}#icon-' + (icons[type] || 'info') + '"></use></svg> ' + message;
+    container.appendChild(t);
+    setTimeout(() => { t.classList.add('toast-out'); setTimeout(() => t.remove(), 260); }, 3500);
+}
+
+// ── CONFIRM MODAL ──
+function confirmModal(message, callback) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+        '<div class="modal">' +
+        '<h3>Confirm</h3>' +
+        '<p>' + message + '</p>' +
+        '<div class="modal-actions">' +
+        '<button class="btn btn-ghost btn-sm" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>' +
+        '<button class="btn btn-danger btn-sm" id="modalConfirmBtn">Confirm</button>' +
+        '</div></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('modalConfirmBtn').addEventListener('click', function() {
+        overlay.remove();
+        if (callback) callback();
+    });
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+// ── PASSWORD TOGGLE ──
+function togglePW(id, btn) {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    const isPW = inp.type === 'password';
+    inp.type = isPW ? 'text' : 'password';
+    const sprite = "{{ url_for('static', filename='icons/sprite.svg') }}";
+    const iconName = isPW ? 'eye-off' : 'eye';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="' + sprite + '#icon-' + iconName + '"></use></svg>';
+}
+</script>
+</body>
+</html>

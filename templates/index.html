@@ -1,0 +1,124 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Free Workout Tracker, Gym Log & AI Fitness Assistant{% endblock %}
+{% block seo_description %}IronTrack is a free online workout tracker and gym log. Plan workouts, track exercises, monitor progress, build streaks and get coaching from the IronBot AI fitness assistant.{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-text">
+        <div class="hero-label">
+            <span class="hero-label-dot"></span>
+            Your Personal Gym Companion
+        </div>
+        <h1 class="hero-heading">
+            TRAIN<br>
+            <span class="hero-heading-accent">HARD.</span><br>
+            TRACK<br>
+            <span class="hero-heading-outline">SMART</span>
+        </h1>
+        <p class="hero-sub">Plan your workouts, track your progress, and monitor your health. All in one powerful platform.</p>
+        <div class="hero-buttons">
+            <a href="/workout" class="btn btn-primary btn-lg">
+                Start Training {{ icon('arrow-right','icon-sm') }}
+            </a>
+            <a href="/summary" class="btn btn-outline btn-lg">View Progress</a>
+        </div>
+        <div class="hero-meta">
+            <div class="hero-meta-item">{{ icon('dumbbell','icon-xs') }} 9 Workout Days</div>
+            <div class="hero-meta-sep">·</div>
+            <div class="hero-meta-item">{{ icon('activity','icon-xs') }} 25 Exercises</div>
+            <div class="hero-meta-sep">·</div>
+            <div class="hero-meta-item">{{ icon('flame','icon-xs') }} {{ streak }} Day Streak</div>
+        </div>
+    </div>
+
+    <div class="hero-right">
+        <div class="hero-stats-grid">
+            <div class="stat-card stat-card-lg">
+                <span class="stat-number">{{ streak }}</span>
+                <span class="stat-label">{{ icon('flame','icon-xs') }} Day Streak</span>
+                <div class="stat-card-glow"></div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">9</span>
+                <span class="stat-label">Workout Days</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">25</span>
+                <span class="stat-label">Exercises</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">4</span>
+                <span class="stat-label">AI Features</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+    <div class="marquee-track">
+        {% set days = ['CHEST DAY','LEG DAY','BACK DAY','SHOULDER DAY','ARM DAY','CORE DAY','CARDIO','FULL BODY','REST DAY'] %}
+        {% for i in range(2) %}
+            {% for d in days %}
+                {% set idx = loop.index0 %}
+                {% set is_active = (idx == active_day_index) %}
+                <span class="{{ 'day-active' if is_active else '' }}">{{ d }}</span><span class="dot">&bull;</span>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section">
+    <div class="features-header">
+        <p class="features-eyebrow">Everything you need</p>
+        <h2 class="section-title">BUILT FOR<br><span>ATHLETES</span></h2>
+    </div>
+    <div class="features-grid">
+
+        <a href="/workout" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('dumbbell','icon-feature') }}</div>
+            <h3>Workout Tracker</h3>
+            <p>View your plan by day, mark exercises complete, add or remove exercises with a rest timer built in.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+        <a href="/bmi" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('scale','icon-feature') }}</div>
+            <h3>Health Calculator</h3>
+            <p>Calculate your Body Mass Index and instantly know your health category with visual feedback.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+        <a href="/summary" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('bar-chart-2','icon-feature') }}</div>
+            <h3>Progress Charts</h3>
+            <p>Visual charts showing your completion rate and day-by-day breakdown of your performance.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+        <a href="/history" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('history','icon-feature') }}</div>
+            <h3>Workout History</h3>
+            <p>Full timestamped log of every exercise you have completed. Never lose track of your journey.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+<a href="/workout" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('flame','icon-feature') }}</div>
+            <h3>Streak Tracker</h3>
+            <p>Stay motivated with a live streak counter. Your current streak is <strong>{{ streak }} day{% if streak != 1 %}s{% endif %}</strong>.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+        <a href="/templates" class="feature-card">
+            <div class="feature-icon-wrap">{{ icon('layout-list','icon-feature') }}</div>
+            <h3>Training Templates</h3>
+            <p>Prebuilt plans for every goal. Apply a ready-to-go training schedule in one click.</p>
+            <div class="feature-arrow">{{ icon('arrow-right','icon-sm') }}</div>
+        </a>
+
+    </div>
+</section>
+{% endblock %}

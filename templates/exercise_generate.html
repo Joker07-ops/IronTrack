@@ -1,0 +1,69 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | {{ name }}: Form, Sets & Tips{% endblock %}
+{% block seo_description %}Get detailed exercises coaching for {{ name }} — form, muscles worked, difficulty, equipment and recommended sets and reps from the IronTrack AI fitness assistant.{% endblock %}
+
+{% block content %}
+<div class="ex-back">
+    <a href="/workout" class="back-link">← Back to Workout</a>
+</div>
+
+<div class="page-header">
+    <h1>{{ name }}</h1>
+    <p>Let IronBot generate exercise details for you</p>
+</div>
+
+<div class="ai-generator" style="max-width:600px;margin:0 auto;">
+    <div class="ai-generator-header">
+        <h3>{{ icon('bot','icon-sm') }} AI EXERCISE DETAILS</h3>
+        <p>Generate muscle groups, instructions, benefits and more for <strong>{{ name }}</strong>.</p>
+    </div>
+    <div class="ai-generator-controls">
+        <button class="btn btn-primary btn-lg btn-full" onclick="generateDetails()" id="genBtn">
+            Generate Details
+        </button>
+    </div>
+    <div id="genSkeleton" style="display:none;margin-top:1.5rem;">
+        <div class="skeleton skeleton-block" style="height:180px;margin-bottom:1rem;"></div>
+        <div class="skeleton skeleton-text" style="width:70%;"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+    </div>
+    <div id="genResult" style="display:none;margin-top:1.5rem;"></div>
+    <div id="genError" class="generator-error" style="display:none;margin-top:1rem;"></div>
+</div>
+
+<script>
+async function generateDetails() {
+    const btn = document.getElementById('genBtn');
+    btn.textContent = 'Generating...'; btn.disabled = true;
+    document.getElementById('genSkeleton').style.display = 'block';
+    document.getElementById('genResult').style.display = 'none';
+    document.getElementById('genError').style.display = 'none';
+    try {
+        const res = await fetch('/generate_exercise_details/{{ name | urlencode }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.error) {
+            document.getElementById('genError').textContent = 'Error: ' + data.error;
+            document.getElementById('genError').style.display = 'block';
+        } else {
+            document.getElementById('genSkeleton').style.display = 'none';
+            document.getElementById('genResult').innerHTML =
+                '<div style="text-align:center;padding:2rem;">' +
+                '<p style="color:var(--emerald);font-size:1.1rem;font-weight:700;">Details generated successfully!</p>' +
+                '<p style="color:var(--g2);margin-top:0.5rem;">Refreshing page...</p></div>';
+            document.getElementById('genResult').style.display = 'block';
+            setTimeout(() => location.reload(), 1200);
+        }
+    } catch(e) {
+        document.getElementById('genSkeleton').style.display = 'none';
+        document.getElementById('genError').textContent = 'Something went wrong.';
+        document.getElementById('genError').style.display = 'block';
+    }
+    btn.textContent = 'Generate Details'; btn.disabled = false;
+}
+</script>
+{% endblock %}

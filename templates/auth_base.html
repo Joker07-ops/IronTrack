@@ -1,0 +1,66 @@
+{% from '_icons.html' import icon %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+
+    {# ═══════════ SEO ═══════════ #}
+    <title>{% block title %}IronTrack | Free Workout Tracker & AI Fitness Assistant{% endblock %}</title>
+    <meta name="description" content="{% block seo_description %}Sign in to IronTrack — the free workout tracker with gym exercise logs, workout plans, progress history and an AI fitness assistant.{% endblock %}">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="{{ site_base }}{{ request.path }}">
+
+    <meta name="theme-color" content="#040404">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f1f1">
+    <meta name="apple-mobile-web-app-title" content="IronTrack">
+
+    {# Open Graph #}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="IronTrack">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="{{ site_base }}{{ request.path }}">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{% block og_description %}{{ self.seo_description() }}{% endblock %}">
+    <meta property="og:image" content="{{ site_base }}{{ url_for('static', filename='logo.svg') }}">
+
+    {# Twitter Card #}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ self.title() }}">
+    <meta name="twitter:description" content="{{ self.seo_description() }}">
+
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-body">
+<div class="auth-bg">
+    <div class="auth-bg-orb auth-bg-orb1"></div>
+    <div class="auth-bg-orb auth-bg-orb2"></div>
+    <div class="auth-bg-grid"></div>
+</div>
+<div class="auth-page">
+    <div class="auth-logo-wrap">
+        <a href="/" class="auth-logo">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="IronTrack" width="52" height="52">
+            <span>IRON<em>TRACK</em></span>
+        </a>
+    </div>
+    <div class="auth-card-wrap">
+        {% block auth_content %}{% endblock %}
+    </div>
+</div>
+<script>
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+function togglePW(id, btn) {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    const isPW = inp.type === 'password';
+    inp.type = isPW ? 'text' : 'password';
+    btn.innerHTML = isPW ? '{{ icon("eye-off","icon-input")|safe }}' : '{{ icon("eye","icon-input")|safe }}';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | {{ name }} Exercise Guide{% endblock %}
+{% block seo_description %}{{ name }} — how to do it, muscles worked, equipment needed, benefits, sets and reps. Part of the IronTrack exercise library.{% endblock %}
+
+{% block content %}
+
+<div class="ex-back">
+    <a href="/workout" class="back-link">← Back to Workout</a>
+</div>
+
+<!-- HERO SECTION -->
+<div class="ex-hero">
+    <div class="ex-hero-text">
+        <div class="ex-tags">
+            <span class="ex-tag">{{ ex.muscle }}</span>
+            <span class="ex-tag difficulty-{{ ex.difficulty | lower }}">{{ ex.difficulty }}</span>
+            <span class="ex-tag">{{ ex.equipment }}</span>
+        </div>
+        <h1>{{ name }}</h1>
+        <p class="ex-sets">{{ ex.sets_reps }}</p>
+        <p class="ex-summary-text">{{ ex.summary }}</p>
+    </div>
+    <div class="ex-hero-img">
+        {% if ex.get('image') and ex.image %}
+        <img src="{{ ex.image }}" alt="{{ name }}" onerror="this.onerror=null;this.parentElement.classList.add('img-fallback')">
+        {% endif %}
+        <div class="ex-img-placeholder">
+            <span>{{ icon('dumbbell','icon-2xl') }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENT GRID -->
+<div class="ex-grid">
+
+    <!-- HOW TO -->
+    <div class="ex-card">
+        <h2 class="ex-card-title">{{ icon('list-ordered','icon-xs') }} How To Do It</h2>
+        <ol class="ex-steps">
+            {% for step in ex.how_to %}
+            <li>{{ step }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    <!-- BENEFITS -->
+    <div class="ex-card">
+        <h2 class="ex-card-title">{{ icon('lightbulb','icon-xs') }} Benefits</h2>
+        <ul class="ex-benefits">
+            {% for benefit in ex.benefits %}
+            <li>{{ benefit }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+{% if ex.get('youtube_id') and ex.youtube_id %}
+<div class="ex-video-section">
+    <h2 class="ex-card-title">{{ icon('play-circle','icon-xs') }} Video Tutorial</h2>
+    <div class="ex-video-wrap">
+        <iframe
+            src="https://www.youtube.com/embed/{{ ex.youtube_id }}"
+            title="{{ name }} tutorial"
+            frameborder="0"
+            allowfullscreen>
+        </iframe>
+    </div>
+</div>
+{% else %}
+<div class="ex-video-section">
+    <h2 class="ex-card-title">{{ icon('youtube','icon-xs') }} Watch on YouTube</h2>
+    <p style="color:var(--g2);font-size:var(--text-sm);margin-bottom:1rem;">Search YouTube for a tutorial on <strong>{{ name }}</strong>.</p>
+    <div class="yt-search-box">
+        <input type="text" class="text-input" id="ytQuery" value="{{ name }} tutorial"
+            style="flex:1;min-width:0;" maxlength="200"
+            onkeydown="if(event.key==='Enter') searchYouTube()">
+        <button class="btn btn-primary" onclick="searchYouTube()">
+            {{ icon('youtube','icon-sm') }} Search
+        </button>
+    </div>
+    <div id="ytResults" class="yt-results" style="display:none;margin-top:1rem;"></div>
+</div>
+<script>
+function searchYouTube() {
+    const query = document.getElementById('ytQuery').value.trim();
+    if (!query) return;
+    const results = document.getElementById('ytResults');
+    results.style.display = 'block';
+    results.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--g3);">Searching...</div>';
+    // Use a simple no-API approach — embed a search iframe
+    results.innerHTML =
+        '<div class="ex-video-wrap">' +
+        '<iframe src="https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(query) + '"' +
+        ' style="width:100%;height:100%;border:none;border-radius:var(--r-md);" allowfullscreen></iframe>' +
+        '</div>' +
+        '<div style="margin-top:0.75rem;text-align:center;">' +
+        '<a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(query) + '" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Open in YouTube</a>' +
+        '</div>';
+}
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,19 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Summary{% endblock %}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+{% block seo_description %}Your personal IronTrack training summary — workout streaks, total sets, overall progress and consistency insights.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>WEEKLY SUMMARY</h1>
+    <p>Your overall progress across all workout days.</p>
+</div>
+
+<div id="react-analytics-root"></div>
+
+<script src="{{ url_for('static', filename='libs/react.production.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/react-dom.production.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='react-analytics.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Workout History{% endblock %}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+{% block seo_description %}Your personal IronTrack workout history | Review every logged session, sets and notes from past training days.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>WORKOUT HISTORY</h1>
+    <p>Every exercise you've completed, organized by date and workout day.</p>
+</div>
+
+{% if logs %}
+{% set month_names = ['', 'January','February','March','April','May','June','July','August','September','October','November','December'] %}
+{% set ns = namespace(current_date='', current_day='', date_open=false, day_open=false) %}
+
+<!-- History Filter Bar -->
+<div class="history-filter-bar" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center;">
+    <label for="historySearch" style="display:flex;align-items:center;gap:0.5rem;">
+        {{ icon('search','icon-xs') }}
+        <input type="text" id="historySearch" class="text-input history-search-input" placeholder="Search exercises..." maxlength="100">
+    </label>
+    <label for="historyFrom" style="display:flex;align-items:center;gap:0.5rem;color:var(--g2);font-size:var(--text-sm);">
+        From:
+        <input type="text" id="historyFrom" class="text-input history-date-input" placeholder="MM/DD/YYYY" maxlength="10">
+    </label>
+    <label for="historyTo" style="display:flex;align-items:center;gap:0.5rem;color:var(--g2);font-size:var(--text-sm);">
+        To:
+        <input type="text" id="historyTo" class="text-input history-date-input" placeholder="MM/DD/YYYY" maxlength="10">
+    </label>
+    <button class="btn btn-ghost btn-sm" onclick="resetHistoryFilter()">Clear</button>
+</div>
+
+<div id="historyNoResults" class="empty-state" style="display:none;">
+    <div class="empty-icon">{{ icon('clipboard-list', 'icon-xl') }}</div>
+    <p class="empty-text">No results match your filter.</p>
+    <p class="empty-sub">Try a different search term or date range.</p>
+    <button class="btn btn-outline btn-sm" onclick="resetHistoryFilter()">Clear Filter</button>
+</div>
+
+<div class="history-timeline">
+{% for log in logs %}
+    {% set log_date = log.completed_at[:10] %}
+    {% set y = log_date[0:4] %}
+    {% set m = log_date[5:7] | int %}
+    {% set d = log_date[8:10] | int %}
+    {% set nice_date = month_names[m] ~ ' ' ~ d ~ ', ' ~ y %}
+
+    {% if log_date != ns.current_date %}
+        {% if ns.day_open %}</tbody></table></div></div>{% endif %}
+        {% if ns.date_open %}</div>{% endif %}
+        <div class="history-date-block">
+            <div class="history-date-header">
+                {{ icon('calendar', 'icon-sm') }}
+                <h2 class="history-date-heading">{{ nice_date }}</h2>
+            </div>
+        {% set ns.current_date = log_date %}
+        {% set ns.current_day = '' %}
+        {% set ns.date_open = true %}
+        {% set ns.day_open = false %}
+    {% endif %}
+
+    {% if log.day != ns.current_day %}
+        {% if ns.day_open %}</tbody></table></div></div>{% endif %}
+        <div class="history-subtable">
+            <h3 class="history-subtable-heading">{{ icon('dumbbell', 'icon-xs') }} {{ log.day }}</h3>
+            <div class="history-table-wrap">
+            <table class="history-table">
+                <thead>
+                    <tr><th>Exercise</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+        {% set ns.current_day = log.day %}
+        {% set ns.day_open = true %}
+    {% endif %}
+
+                    <tr>
+                        <td class="history-exercise">{{ log.exercise }}</td>
+                        <td class="history-time">{{ log.completed_at[11:16] }}</td>
+                    </tr>
+
+{% endfor %}
+{% if ns.day_open %}</tbody></table></div></div>{% endif %}
+{% if ns.date_open %}</div>{% endif %}
+</div>
+
+<script>
+// Inject exercise counts into date and subtable headings —
+// done client-side so the Jinja grouping above stays simple
+// (pure boundary-detection, no fragile counting filters).
+document.querySelectorAll('.history-subtable').forEach(sub => {
+    const rows = sub.querySelectorAll('tbody tr').length;
+    const heading = sub.querySelector('.history-subtable-heading');
+    const badge = document.createElement('span');
+    badge.className = 'history-count-badge';
+    badge.textContent = rows + (rows === 1 ? ' exercise' : ' exercises');
+    heading.appendChild(badge);
+});
+document.querySelectorAll('.history-date-block').forEach(block => {
+    const rows = block.querySelectorAll('tbody tr').length;
+    const heading = block.querySelector('.history-date-heading');
+    const badge = document.createElement('span');
+    badge.className = 'history-count-badge history-count-badge-date';
+    badge.textContent = rows + (rows === 1 ? ' exercise' : ' exercises');
+    heading.appendChild(badge);
+});
+</script>
+
+<script>
+// ── HISTORY FILTER ──
+function toYMD(value) {
+    if (!value) return '';
+    var parts = value.replace(/\s+/g, '').split('/');
+    if (parts.length !== 3) return '';
+    var mm = parts[0].length === 1 ? '0' + parts[0] : parts[0];
+    var dd = parts[1].length === 1 ? '0' + parts[1] : parts[1];
+    return parts[2] + '-' + mm + '-' + dd;
+}
+
+function filterHistory() {
+    var search = document.getElementById('historySearch').value.toLowerCase().trim();
+    var fromVal = toYMD(document.getElementById('historyFrom').value);
+    var toVal = toYMD(document.getElementById('historyTo').value);
+    var visibleCount = 0;
+
+    document.querySelectorAll('.history-date-block').forEach(function(block) {
+        var blockVisible = false;
+        // Get date from the heading text — format: "Month DD, YYYY"
+        var headingText = block.querySelector('.history-date-heading')?.textContent || '';
+        var dateMatch = headingText.match(/(\w+)\s+(\d+),\s+(\d+)/);
+        var blockDate = dateMatch ? dateMatch[3] + '-' + ('0' + (new Date(Date.parse(dateMatch[1] + ' 1, 2000')).getMonth() + 1)).slice(-2) + '-' + ('0' + dateMatch[2]).slice(-2) : '';
+
+        block.querySelectorAll('.history-subtable').forEach(function(sub) {
+            var subVisible = false;
+            sub.querySelectorAll('tbody tr').forEach(function(row) {
+                var exName = row.querySelector('.history-exercise')?.textContent.toLowerCase() || '';
+                var matchesSearch = !search || exName.includes(search);
+                var matchesFrom = !fromVal || blockDate >= fromVal;
+                var matchesTo = !toVal || blockDate <= toVal;
+                var visible = matchesSearch && matchesFrom && matchesTo;
+                row.style.display = visible ? '' : 'none';
+                if (visible) subVisible = true;
+            });
+            sub.style.display = subVisible ? '' : 'none';
+            if (subVisible) blockVisible = true;
+        });
+        block.style.display = blockVisible ? '' : 'none';
+        if (blockVisible) visibleCount++;
+    });
+
+    document.getElementById('historyNoResults').style.display = visibleCount === 0 ? 'flex' : 'none';
+}
+
+function resetHistoryFilter() {
+    document.getElementById('historySearch').value = '';
+    document.getElementById('historyFrom').value = '';
+    document.getElementById('historyTo').value = '';
+    filterHistory();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('historySearch').addEventListener('input', filterHistory);
+    document.getElementById('historyFrom').addEventListener('input', filterHistory);
+    document.getElementById('historyTo').addEventListener('input', filterHistory);
+});
+</script>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">{{ icon('clipboard-list', 'icon-xl') }}</div>
+    <p class="empty-text">No history yet.</p>
+    <p class="empty-sub">Complete some exercises and they will appear here.</p>
+    <a href="/workout" class="btn btn-primary">{{ icon('dumbbell', 'icon-xs') }} Go to Workout</a>
+</div>
+{% endif %}
+{% endblock %}

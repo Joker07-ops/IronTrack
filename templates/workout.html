@@ -1,0 +1,383 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Workout Tracker & Gym Exercise Log{% endblock %}
+{% block seo_description %}Plan and track your gym workouts with IronTrack. Log exercises per day, mark sets complete, save notes and follow a structured training plan that keeps you consistent.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>WORKOUT PLAN</h1>
+    <p>Select a day, track your exercises.</p>
+</div>
+
+<!-- Rest Timer Overlay -->
+<div class="rest-timer" id="restTimer" style="display:none;">
+    <div class="rest-timer-inner">
+        <p class="rest-timer-label">REST TIMER</p>
+        <div class="rest-timer-circle">
+            <svg viewBox="0 0 100 100">
+                <circle class="rest-timer-bg" cx="50" cy="50" r="44"/>
+                <circle class="rest-timer-ring" id="timerRing" cx="50" cy="50" r="44"
+                    stroke-dasharray="276.5" stroke-dashoffset="0"/>
+            </svg>
+            <span class="rest-timer-count" id="timerCount">60</span>
+        </div>
+        <p class="rest-timer-sub">seconds remaining</p>
+        <div class="rest-timer-actions">
+            <button class="btn btn-outline btn-sm" onclick="skipTimer()">Skip</button>
+            <button class="btn btn-danger btn-sm" onclick="stopTimer()">Stop</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Custom Day -->
+<div class="add-day-bar">
+    <form method="POST" action="/add_day" class="inline-form">
+        <input type="text" name="day_name" placeholder="New day name e.g. Day 10 (Glutes)" class="text-input" required maxlength="100">
+        <button type="submit" class="btn btn-outline btn-sm">+ Add Day</button>
+    </form>
+    <a href="/templates" class="btn btn-ghost btn-sm template-link-btn">{{ icon('layout-list','icon-xs') }} Browse Templates</a>
+</div>
+
+<!-- Day Selector -->
+<div class="day-tabs">
+    {% for day in days %}
+        <a href="/workout?day={{ day }}"
+           class="day-tab {% if day == selected_day %}active{% endif %}">
+            {{ day }}
+        </a>
+    {% endfor %}
+</div>
+
+<!-- Workout Panel -->
+<div class="workout-panel">
+    <div class="workout-panel-header">
+        <h2>{{ selected_day }}</h2>
+        <form method="POST" action="/reset_day" style="display:inline;" id="resetDayForm"
+              onsubmit="event.preventDefault(); confirmModal('Reset all exercises for this day?', function(){ document.getElementById('resetDayForm').submit(); })">
+            <input type="hidden" name="day" value="{{ selected_day }}">
+            <button type="submit" class="btn btn-danger btn-sm">Reset Day</button>
+        </form>
+    </div>
+
+    <ul class="exercise-list">
+        {% for exercise, status in exercises.items() %}
+        <li class="exercise-item {% if status %}completed{% endif %}"
+            onclick="if(!event.target.closest('.exercise-actions')) navigateTo('/exercise/{{ exercise | urlencode }}')">
+            <span class="exercise-name">
+                {% if status %}{{ icon('check-circle','icon-sm') }}{% else %}{{ icon('circle','icon-sm') }}{% endif %}
+                <span class="exercise-link">{{ exercise }}</span>
+            </span>
+            <div class="exercise-actions">
+                {% if not status %}
+                <form method="POST" action="/mark_complete" style="display:inline;"
+                      onsubmit="startRestTimer(event, this)">
+                    <input type="hidden" name="day" value="{{ selected_day }}">
+                    <input type="hidden" name="exercise" value="{{ exercise }}">
+                    <button type="submit" class="btn btn-success btn-sm">Done</button>
+                </form>
+                {% endif %}
+                <button class="btn btn-ghost btn-sm"
+                    onclick="toggleNote('note-{{ loop.index }}')" title="Add note">{{ icon('file-text','icon-xs') }}</button>
+                <form method="POST" action="/remove_exercise" style="display:inline;" class="remove-ex-form">
+                    <input type="hidden" name="day" value="{{ selected_day }}">
+                    <input type="hidden" name="exercise" value="{{ exercise }}">
+                    <button type="button" class="btn btn-danger btn-sm"
+                        onclick="removeExercise(this)">Remove</button>
+                </form>
+            </div>
+        </li>
+        <!-- Note row -->
+        <li class="note-row" id="note-{{ loop.index }}"
+            style="{{ '' if notes[exercise] else 'display:none;' }}">
+            <form method="POST" action="/save_note" class="note-form">
+                <input type="hidden" name="day" value="{{ selected_day }}">
+                <input type="hidden" name="exercise" value="{{ exercise }}">
+                <input type="text" name="note" class="text-input note-input"
+                    placeholder="e.g. Use 20kg, 3 sets of 12"
+                    value="{{ notes[exercise] }}" maxlength="500">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+        </li>
+        {% else %}
+        <li class="exercise-item empty">
+            <div class="empty-mini">
+                <span class="empty-mini-icon">{{ icon('dumbbell','icon-md') }}</span>
+                <p class="empty-mini-text">No exercises for this day</p>
+                <p class="empty-mini-sub">Add one above or use the AI generator below</p>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="add-exercise-form">
+        <h3>Add Exercise</h3>
+        <form method="POST" action="/add_exercise" class="inline-form">
+            <input type="hidden" name="day" value="{{ selected_day }}">
+            <input type="text" name="exercise" placeholder="e.g. Cable Rows" class="text-input" required maxlength="100">
+            <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+    </div>
+</div>
+
+<!-- AI Workout Generator -->
+<div class="ai-generator">
+    <div class="ai-generator-header">
+        <h3>{{ icon('bot','icon-sm') }} AI WORKOUT GENERATOR</h3>
+        <p>Let IronBot generate exercises for this day</p>
+    </div>
+    <div class="ai-generator-controls">
+        <select id="difficultySelect" class="text-input" style="max-width:200px;">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate" selected>Intermediate</option>
+            <option value="advanced">Advanced</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateWorkout()" id="generateBtn">
+            Generate Exercises
+        </button>
+    </div>
+    <div id="genSkeleton" class="generator-skeleton" style="display:none;padding:1rem 1.5rem;">
+        <div class="skeleton skeleton-text" style="width:50%;margin-bottom:0.75rem;"></div>
+        <div class="skeleton skeleton-text-sm" style="width:35%;margin-bottom:1rem;"></div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <div class="skeleton" style="width:80px;height:32px;border-radius:var(--r-full);"></div>
+            <div class="skeleton" style="width:100px;height:32px;border-radius:var(--r-full);"></div>
+            <div class="skeleton" style="width:70px;height:32px;border-radius:var(--r-full);"></div>
+        </div>
+    </div>
+    <div id="generatorResult" class="generator-result" style="display:none;">
+        <p class="generator-result-title">Generated exercises — click to add:</p>
+        <div id="generatedList" class="generated-list"></div>
+    </div>
+    <div id="generatorError" class="generator-error" style="display:none;"></div>
+</div>
+
+<script>
+// ── MOBILE SWIPE ON EXERCISE ROWS ──
+document.addEventListener('DOMContentLoaded', function() {
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var touchTarget = null;
+
+    document.querySelectorAll('.exercise-item').forEach(function(item) {
+        item.addEventListener('touchstart', function(e) {
+            var touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchTarget = this;
+        }, { passive: true });
+
+        item.addEventListener('touchend', function(e) {
+            if (!touchTarget) return;
+            var touch = e.changedTouches[0];
+            var dx = touch.clientX - touchStartX;
+            var dy = touch.clientY - touchStartY;
+            // Only horizontal swipes, minimum 60px distance
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
+                e.preventDefault();
+                if (dx > 0) {
+                    // Swipe right → mark complete
+                    var doneForm = this.querySelector('.btn-success')?.closest('form');
+                    if (doneForm && !this.classList.contains('completed')) {
+                        var formData = new FormData(doneForm);
+                        fetch('/mark_complete', { method: 'POST', body: formData })
+                            .then(function() {
+                                var timerForm = doneForm;
+                                var event = new Event('submit', { cancelable: true });
+                                // Trigger rest timer manually
+                                if (window.startRestTimer) {
+                                    startRestTimer(event, timerForm);
+                                }
+                                // Optimistic UI update
+                                location.reload();
+                            });
+                    }
+                } else {
+                    // Swipe left → show remove confirm
+                    var removeBtn = this.querySelector('.btn-danger');
+                    if (removeBtn) {
+                        removeBtn.click();
+                    }
+                }
+            }
+            touchTarget = null;
+        }, { passive: false });
+    });
+});
+
+// ── REST TIMER ──
+let timerInterval = null;
+let timerSeconds = 60;
+let pendingForm = null;
+
+function startRestTimer(event, form) {
+    event.preventDefault();
+    pendingForm = form;
+    timerSeconds = 60;
+    updateTimerDisplay();
+    document.getElementById('restTimer').style.display = 'flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    timerInterval = setInterval(() => {
+        timerSeconds--;
+        updateTimerDisplay();
+        if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            playBeep();
+            setTimeout(() => {
+                document.getElementById('restTimer').style.display = 'none';
+                pendingForm.submit();
+            }, 800);
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    document.getElementById('timerCount').textContent = timerSeconds;
+    const offset = 276.5 * (1 - timerSeconds / 60);
+    const ring = document.getElementById('timerRing');
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = timerSeconds > 30 ? 'var(--accent)' : timerSeconds > 10 ? 'var(--warning)' : 'var(--danger)';
+}
+
+function skipTimer() {
+    clearInterval(timerInterval);
+    document.getElementById('restTimer').style.display = 'none';
+    if (pendingForm) pendingForm.submit();
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    document.getElementById('restTimer').style.display = 'none';
+    pendingForm = null;
+}
+
+function playBeep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880; osc.type = 'sine';
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.8);
+    } catch(e) {}
+}
+
+// ── NOTES ──
+function toggleNote(id) {
+    const row = document.getElementById(id);
+    const isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'table-row' : 'none';
+    // Focus input when opened
+    if (isHidden) setTimeout(function() {
+        row.querySelector('.note-input')?.focus();
+    }, 100);
+}
+
+// ── NOTE AUTOSAVE ──
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.note-input').forEach(function(input) {
+        var timer = null;
+        var savedIndicator = document.createElement('span');
+        savedIndicator.className = 'note-saved';
+        savedIndicator.textContent = 'Saved';
+        savedIndicator.style.cssText = 'display:none;color:var(--emerald);font-size:0.7rem;font-weight:700;margin-left:0.5rem;';
+        input.parentNode.appendChild(savedIndicator);
+
+        input.addEventListener('input', function() {
+            savedIndicator.style.display = 'none';
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function() {
+                var form = input.closest('.note-form');
+                var formData = new FormData(form);
+                fetch('/save_note', {
+                    method: 'POST',
+                    body: formData
+                }).then(function() {
+                    savedIndicator.style.display = 'inline';
+                    setTimeout(function() {
+                        savedIndicator.style.display = 'none';
+                    }, 2000);
+                }).catch(function() {
+                    // silent fail — manual save still works
+                });
+            }, 800);
+        });
+    });
+});
+
+// ── REMOVE EXERCISE WITH UNDO ──
+function removeExercise(btn) {
+    var form = btn.closest('.remove-ex-form');
+    var day = form.querySelector('input[name="day"]').value;
+    var exercise = form.querySelector('input[name="exercise"]').value;
+    confirmModal('Remove ' + exercise + '?', function() {
+        var fd = new FormData(form);
+        fetch('/remove_exercise', { method: 'POST', body: fd }).then(function() {
+            showUndoToast(exercise + ' removed', function() {
+                var rd = new FormData();
+                rd.append('day', day);
+                rd.append('exercise', exercise);
+                fetch('/add_exercise', { method: 'POST', body: rd }).then(function() {
+                    showToast(exercise + ' re-added', 'success');
+                    setTimeout(function() { location.reload(); }, 1000);
+                });
+            });
+            setTimeout(function() { location.reload(); }, 12000);
+        });
+    });
+}
+
+// ── AI GENERATOR ──
+async function generateWorkout() {
+    const btn = document.getElementById('generateBtn');
+    const level = document.getElementById('difficultySelect').value;
+    const day = '{{ selected_day }}';
+    btn.textContent = 'Generating...'; btn.disabled = true;
+    document.getElementById('genSkeleton').style.display = 'block';
+    document.getElementById('generatorResult').style.display = 'none';
+    document.getElementById('generatorError').style.display = 'none';
+    try {
+        const res = await fetch('/generate_workout', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ day, level })
+        });
+        const data = await res.json();
+        if (data.error) {
+            document.getElementById('generatorError').textContent = 'Error: ' + data.error;
+            document.getElementById('generatorError').style.display = 'block';
+        } else {
+            const list = document.getElementById('generatedList');
+            list.innerHTML = '';
+            data.exercises.forEach(ex => {
+                const b = document.createElement('button');
+                b.className = 'generated-exercise-btn';
+                b.textContent = '+ ' + ex;
+                b.onclick = () => addGeneratedExercise(ex, b);
+                list.appendChild(b);
+            });
+            document.getElementById('genSkeleton').style.display = 'none';
+            document.getElementById('generatorResult').style.display = 'block';
+        }
+    } catch(e) {
+        document.getElementById('genSkeleton').style.display = 'none';
+        document.getElementById('generatorError').textContent = 'Something went wrong.';
+        document.getElementById('generatorError').style.display = 'block';
+    }
+    btn.textContent = 'Generate Exercises'; btn.disabled = false;
+}
+
+async function addGeneratedExercise(exercise, btn) {
+    const formData = new FormData();
+    formData.append('day', '{{ selected_day }}');
+    formData.append('exercise', exercise);
+    await fetch('/add_exercise', { method: 'POST', body: formData });
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ' + exercise;
+    btn.disabled = true;
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => location.reload(), 800);
+}
+</script>
+{% endblock %}

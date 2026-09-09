@@ -1,0 +1,15 @@
+{
+  "name": "IronTrack — Gym Workout Tracker",
+  "short_name": "IronTrack",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#040404",
+  "theme_color": "#c8ff00",
+  "icons": [
+    {
+      "src": "/static/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
