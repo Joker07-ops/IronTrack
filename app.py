@@ -509,52 +509,57 @@ def google_authorized():
         return redirect(url_for('login'))
     try:
         token = oauth.google.authorize_access_token()
+        userinfo = token.get('userinfo')
+        if not userinfo:
+            userinfo = oauth.google.parse_id_token(token)
+        if not userinfo:
+            flash('Could not retrieve your Google profile.')
+            return redirect(url_for('login'))
+
+        email    = (userinfo.get('email') or '').lower()
+        google_id = str(userinfo.get('sub') or '')
+        if not google_id:
+            flash('Google sign-in failed: no Google account ID was returned.')
+            return redirect(url_for('login'))
+        name     = userinfo.get('name') or email.split('@')[0] or 'IronTrack User'
+        first_name = userinfo.get('given_name') or name.split()[0] if name else 'Iron'
+        last_name  = userinfo.get('family_name') or (name.split(None, 1)[1] if ' ' in name else '')
+
+        # 1. Existing user already linked to this Google account
+        user_dict = get_user_by_google_id(google_id)
+        if user_dict:
+            login_user(User(user_dict))
+            session.pop('guest', None)
+            if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
+                return redirect(url_for('account_status'))
+            return redirect(request.args.get('next') or url_for('home'))
+
+        # 2. Existing user with the same email → link the Google account
+        user_dict = get_user_by_email(email)
+        if user_dict:
+            link_google_id(user_dict['id'], google_id)
+            login_user(User(user_dict))
+            session.pop('guest', None)
+            flash('Google account linked to your existing login.')
+            if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
+                return redirect(url_for('account_status'))
+            return redirect(request.args.get('next') or url_for('home'))
+
+        # 3. Brand new user
+        user_id = create_google_user(name, email, google_id,
+                                     username=email.split('@')[0] if email else 'user',
+                                     first_name=first_name, last_name=last_name)
+        seed_default_plan(user_id)
+        user_dict = get_user_by_id(user_id)
+        login_user(User(user_dict))
+        session.pop('guest', None)
+        flash('Welcome! Your account was created with Google.')
+        return redirect(url_for('home'))
     except Exception as e:
-        flash(f'Google sign-in failed: {str(e)}')
+        import traceback
+        traceback.print_exc()
+        flash(f'Google sign-in failed: {type(e).__name__}: {e}')
         return redirect(url_for('login'))
-    userinfo = token.get('userinfo')
-    if not userinfo:
-        userinfo = oauth.google.parse_id_token(token)
-    if not userinfo:
-        flash('Could not retrieve your Google profile.')
-        return redirect(url_for('login'))
-
-    email    = (userinfo.get('email') or '').lower()
-    google_id = str(userinfo.get('sub'))
-    name     = userinfo.get('name') or email.split('@')[0] or 'IronTrack User'
-    first_name = userinfo.get('given_name') or name.split()[0] if name else 'Iron'
-    last_name  = userinfo.get('family_name') or (name.split(None, 1)[1] if ' ' in name else '')
-
-    # 1. Existing user already linked to this Google account
-    user_dict = get_user_by_google_id(google_id)
-    if user_dict:
-        login_user(User(user_dict))
-        session.pop('guest', None)
-        if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
-            return redirect(url_for('account_status'))
-        return redirect(request.args.get('next') or url_for('home'))
-
-    # 2. Existing user with the same email → link the Google account
-    user_dict = get_user_by_email(email)
-    if user_dict:
-        link_google_id(user_dict['id'], google_id)
-        login_user(User(user_dict))
-        session.pop('guest', None)
-        flash('Google account linked to your existing login.')
-        if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
-            return redirect(url_for('account_status'))
-        return redirect(request.args.get('next') or url_for('home'))
-
-    # 3. Brand new user
-    user_id = create_google_user(name, email, google_id,
-                                 username=email.split('@')[0] if email else 'user',
-                                 first_name=first_name, last_name=last_name)
-    seed_default_plan(user_id)
-    user_dict = get_user_by_id(user_id)
-    login_user(User(user_dict))
-    session.pop('guest', None)
-    flash('Welcome! Your account was created with Google.')
-    return redirect(url_for('home'))
 
 
 @app.route('/logout')
