@@ -186,7 +186,7 @@
         <li class="nav-user">
             <a href="/profile" class="nav-user-name">
                 {% if current_user.avatar %}
-                <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="" class="nav-user-avatar">
+                <img src="{{ avatar_url(current_user) }}" alt="" class="nav-user-avatar">
                 {% else %}
                 {{ icon('user','icon-xs') }} {{ (current_user.first_name or current_user.name)[0].upper() }}{{ ((current_user.last_name or (current_user.name.split(' ',1)[1] if ' ' in current_user.name else ''))[:1]).upper() }}
                 {% endif %}
@@ -223,7 +223,7 @@
     {% if current_user.is_authenticated %}
     <a href="/profile" class="mobile-menu-user">
         {% if current_user.avatar %}
-        <img src="{{ url_for('static', filename=current_user.avatar) }}" alt="" class="mobile-menu-avatar mobile-menu-avatar-img">
+        <img src="{{ avatar_url(current_user) }}" alt="" class="mobile-menu-avatar mobile-menu-avatar-img">
         {% else %}
         <span class="mobile-menu-avatar">{{ (current_user.first_name or current_user.name)[0].upper() }}{{ ((current_user.last_name or (current_user.name.split(' ',1)[1] if ' ' in current_user.name else ''))[:1]).upper() }}</span>
         {% endif %}

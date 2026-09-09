@@ -21,7 +21,7 @@
     <div class="ig-header">
         <div class="ig-avatar-ring">
             {% if user.get('avatar') %}
-            <img src="{{ url_for('static', filename=user.avatar) }}" alt="{{ user.first_name or user.name }}" class="ig-avatar ig-avatar-img">
+            <img src="{{ avatar_url(user) }}" alt="{{ user.first_name or user.name }}" class="ig-avatar ig-avatar-img">
             {% else %}
             <div class="ig-avatar ig-avatar-initials">{{ (user.first_name or user.name)[0].upper() }}{{ ((user.last_name or (user.name.split(' ',1)[1] if ' ' in user.name else ''))[:1]).upper() }}</div>
             {% endif %}

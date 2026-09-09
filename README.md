@@ -34,11 +34,11 @@ get coached — all in one place, without subscriptions or ads.
 | Layer     | Technology |
 |-----------|------------|
 | Backend   | Flask, Flask-Login, Flask-Mail, Flask-Limiter |
-| Database  | SQLite (`gymtrack.db`, auto-created on first run) |
+| Database  | dual backend: SQLite (local `gymtrack.db`) or Postgres via `DATABASE_URL` (serverless) |
 | Frontend  | Jinja2, vanilla JS, React (charts), CSS design tokens |
 | AI        | Groq API, Google Gemini helper |
 | Auth      | Email/password + Google OAuth 2.0 (Authlib) |
-| Deploy    | gunicorn (see `Procfile`) |
+| Deploy    | gunicorn (see `Procfile`) or Vercel serverless (see `vercel.json`) |
 
 ## Getting Started
 
@@ -101,6 +101,9 @@ startup.
 | `GOOGLE_CLIENT_SECRET`  | optional | Google OAuth client secret. |
 | `ADMIN_EMAILS`          | optional | Comma-separated list of emails with access to the admin feedback inbox. |
 | `SITE_URL`              | optional | Canonical site URL (used for SEO URLs in meta tags). |
+| `DATABASE_URL`          | prod | Postgres connection string. When set, Postgres is used (e.g. on Vercel); otherwise SQLite (`gymtrack.db`). |
+| `SESSION_COOKIE_SECURE` | optional | Send session cookies over HTTPS only. Defaults to `true` on Vercel, `false` locally. |
+| `PREFERRED_URL_SCHEME`  | optional | Forces redirect scheme to `https` behind a proxy. Defaults to `https` on Vercel. |
 
 ### Google OAuth notes
 
@@ -113,14 +116,16 @@ Register the following URLs as **Authorized redirect URIs** in your Google Cloud
 
 ```
 ├── app.py                 # App factory, routes and startup DB init
-├── database.py            # SQLite schema + seed logic
+├── api/index.py           # Vercel serverless entrypoint (WSGI)
+├── database.py            # Dual-backend schema (SQLite + Postgres) + seed logic
 ├── data.py                # Data access layer (users, progress, chat, feedback, …)
 ├── workout.py             # Workout plan + progress business logic
 ├── exercises.py           # Built-in exercise catalogue
 ├── workout_templates.py   # Prebuilt training plan templates
 ├── gemini_workout.py      # Gemini-based workout generation helper
 ├── requirements.txt
-├── Procfile / runtime.txt      # Deploy config (gunicorn, render/heroku)
+├── vercel.json                 # Vercel serverless config
+├── Procfile / runtime.txt      # gunicorn config (Render / Heroku)
 ├── css/                        # Design tokens, app styles, auth styles (served via /css/)
 ├── templates/                  # Jinja2 templates (incl. base.html, auth_base.html)
 └── static/
@@ -129,12 +134,32 @@ Register the following URLs as **Authorized redirect URIs** in your Google Cloud
     ├── libs/                   # Vendored React + Chart.js
     ├── react-analytics.js      # Theme-aware chart component (plain JS)
     ├── sw.js                   # Service worker
-    └── uploads/                # Profile photos (not committed)
+    └── uploads/                # Legacy local-only profile photos (not committed)
 ```
 
 ## Deployment
 
-The repo ships with a `Procfile` and `runtime.txt` for platforms like Heroku or Render:
+### Option A — Vercel (serverless)
+
+The app ships with a Vercel serverless entrypoint (`api/index.py` + `vercel.json`). It uses
+a Postgres database — set these environment variables in your Vercel project:
+
+1. Create a free Postgres database (e.g. [Neon](https://neon.tech) or
+   [Supabase](https://supabase.com)) and copy its connection string.
+2. In Vercel → project → **Settings → Environment Variables** add:
+   - `DATABASE_URL` — your Postgres connection string (hostname must be `postgres.…` /
+     `-pooler.…`, not inlined credentials with dashes in the password).
+   - `SECRET_KEY` — a long random string (sessions reset per instance otherwise).
+   - `SITE_URL` — e.g. `https://your-app.vercel.app`.
+   - Optional: `GROQ_API_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `GOOGLE_CLIENT_ID`,
+     `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`.
+3. Import the repo on Vercel (Framework Preset: **Other**). The build/start commands are
+   handled automatically by `vercel.json`.
+
+> **Note:** serverless filesystems are read-only — profile photos are stored in the
+> database (served via `/avatar/<id>`) instead of on disk.
+
+### Option B — Heroku / Render (always-on)
 
 ```bash
 # Procfile

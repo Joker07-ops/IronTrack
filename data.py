@@ -133,7 +133,7 @@ def get_streak(user_id):
     streak = 0
     check = date.today()
     for row in rows:
-        d = date.fromisoformat(row)
+        d = row if isinstance(row, date) else date.fromisoformat(row)
         if d == check or d == check - timedelta(days=1):
             streak += 1
             check = d - timedelta(days=1)
@@ -392,10 +392,21 @@ def update_user_profile(user_id, name, email, phone=None, bio=None, fitness_goal
     conn.close()
 
 
-def update_user_avatar(user_id, avatar_path):
+def update_user_avatar(user_id, avatar_path=None, avatar_data=None, avatar_mime=None):
+    """Store an avatar. Either a legacy static path, or raw image bytes
+    (avatar_data/avatar_mime) kept in the database for serverless deploys."""
     conn = get_db()
     c = conn.cursor()
-    c.execute("UPDATE users SET avatar=? WHERE id=?", (avatar_path, user_id))
+    if avatar_data is not None:
+        c.execute(
+            "UPDATE users SET avatar='db', avatar_data=?, avatar_mime=? WHERE id=?",
+            (avatar_data, avatar_mime or 'image/png', user_id)
+        )
+    else:
+        c.execute(
+            "UPDATE users SET avatar=?, avatar_data=NULL, avatar_mime=NULL WHERE id=?",
+            (avatar_path, user_id)
+        )
     conn.commit()
     conn.close()
 
@@ -644,13 +655,24 @@ def cleanup_expired_deletions(days=30):
     conn = get_db()
     c = conn.cursor()
     c.execute(
-        "SELECT id FROM users WHERE account_status='pending_delete' "
-        "AND delete_requested_at IS NOT NULL "
-        "AND datetime(delete_requested_at, '+' || ? || ' days') <= datetime('now')",
-        (days,)
+        "SELECT id, delete_requested_at FROM users "
+        "WHERE account_status='pending_delete' AND delete_requested_at IS NOT NULL"
     )
-    ids = [row['id'] for row in c.fetchall()]
+    rows = c.fetchall()
     conn.close()
+    cutoff = datetime.now() - timedelta(days=days)
+    ids = []
+    for row in rows:
+        ts = row['delete_requested_at']
+        if isinstance(ts, str):
+            try:
+                ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                if ts.tzinfo is not None:
+                    ts = ts.replace(tzinfo=None)
+            except ValueError:
+                continue
+        if isinstance(ts, datetime) and ts <= cutoff:
+            ids.append(row['id'])
     for uid in ids:
         delete_user_data(uid)
     return len(ids)

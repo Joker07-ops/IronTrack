@@ -2,6 +2,8 @@ flask
 flask-login
 flask-mail
 werkzeug
+psycopg[binary]
+psycopg-pool
 groq
 python-dotenv
 gunicorn

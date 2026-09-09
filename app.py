@@ -4,6 +4,7 @@ import secrets
 import random
 import socket
 import time as time_mod
+import mimetypes
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -51,23 +52,34 @@ secret_key = os.environ.get("SECRET_KEY")
 if not secret_key:
     key_file = os.path.join(os.path.dirname(__file__), '.secret_key')
     if os.path.exists(key_file):
-        secret_key = open(key_file).read().strip()
-    else:
+        try:
+            secret_key = open(key_file).read().strip()
+        except Exception:
+            secret_key = ''
+    if not secret_key:
         secret_key = secrets.token_hex(32)
-        with open(key_file, 'w') as f:
-            f.write(secret_key)
+        try:
+            with open(key_file, 'w') as f:
+                f.write(secret_key)
+        except Exception:
+            # Read-only filesystem on serverless: sessions simply reset per instance.
+            pass
 app.secret_key = secret_key
-app.config['PREFERRED_URL_SCHEME'] = 'http'
+app.config['PREFERRED_URL_SCHEME'] = os.environ.get('PREFERRED_URL_SCHEME', 'https' if os.environ.get('VERCEL') else 'http')
 
 # ── SESSION COOKIE SECURITY ──
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_NAME'] = 'irontrack_session'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'true' if os.environ.get('VERCEL') else 'false').lower() == 'true'
 
 # ── PROFILE PHOTO UPLOADS ──
 import os as _os
 UPLOAD_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'uploads')
-_os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    _os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    pass
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -90,10 +102,39 @@ def is_admin():
     return current_user.is_authenticated and (current_user.email or '').lower() in ADMIN_EMAILS
 
 
+def avatar_url(user):
+    """Return the URL for a user avatar, or None if none is set.
+    Supports avatars stored in the DB (serverless) and legacy static files."""
+    if not user:
+        return None
+    if isinstance(user, dict):
+        avatar = user.get('avatar') or ''
+        uid = user.get('id')
+    else:
+        avatar = getattr(user, 'avatar', '') or ''
+        uid = getattr(user, 'id', 0)
+    if avatar == 'db':
+        return url_for('avatar', user_id=uid) if uid else None
+    if avatar:
+        return url_for('static', filename=avatar)
+    return None
+
+
 @app.context_processor
 def inject_site_globals():
     base = SITE_URL or request.url_root.rstrip('/')
-    return dict(site_base=base, SITE_URL=SITE_URL, now=datetime.now(), is_admin=is_admin())
+    return dict(site_base=base, SITE_URL=SITE_URL, now=datetime.now(), is_admin=is_admin(),
+                avatar_url=avatar_url)
+
+
+@app.route('/avatar/<int:user_id>')
+def avatar(user_id):
+    """Serve a user's avatar from the database."""
+    user_dict = get_user_by_id(int(user_id))
+    if not user_dict or not user_dict.get('avatar_data'):
+        return ('', 404)
+    return Response(bytes(user_dict['avatar_data']),
+                    mimetype=user_dict.get('avatar_mime') or 'image/png')
 
 # ── MAIL ──
 app.config['MAIL_SERVER']        = 'smtp.gmail.com'
@@ -310,6 +351,8 @@ class User(UserMixin):
         self.email       = user_dict['email']
         self.username    = user_dict.get('username', '')
         self.avatar      = user_dict.get('avatar') or ''
+        self.avatar_data = user_dict.get('avatar_data')
+        self.avatar_mime = user_dict.get('avatar_mime') or 'image/png'
         self.is_verified = bool(user_dict.get('is_verified', 1))
         self.account_status = user_dict.get('account_status') or 'active'
 
@@ -319,11 +362,19 @@ def load_user(user_id):
     return User(user_dict) if user_dict else None
 
 with app.app_context():
-    init_db()
-    from database import init_ai_exercise_details_table
-    init_ai_exercise_details_table()
-    from database import init_feedback_table
-    init_feedback_table()
+    from database import init_db, init_ai_exercise_details_table, init_feedback_table
+    try:
+        init_db()
+    except Exception as e:
+        print(f"[Startup] init_db skipped: {e}")
+    try:
+        init_ai_exercise_details_table()
+    except Exception as e:
+        print(f"[Startup] init_ai_exercise_details_table skipped: {e}")
+    try:
+        init_feedback_table()
+    except Exception as e:
+        print(f"[Startup] init_feedback_table skipped: {e}")
     # Purge accounts whose 30-day deletion grace period has already passed
     try:
         expired = cleanup_expired_deletions(days=DELETE_GRACE_DAYS)
@@ -1368,11 +1419,20 @@ def update_profile():
         if not _allowed_avatar(file.filename):
             flash('Profile photo must be a PNG, JPG, GIF, or WEBP image.')
             return redirect(url_for('profile'))
-        ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
-        saved_name = f"avatar_{current_user.id}_{secrets.token_hex(6)}.{ext}"
-        saved_path = _os.path.join(UPLOAD_DIR, saved_name)
-        file.save(saved_path)
-        update_user_avatar(current_user.id, f"uploads/{saved_name}")
+        avatar_data = file.read()
+        avatar_mime = mimetypes.guess_type(file.filename)[0] or 'image/png'
+        # Capture any legacy file so it can be deleted after the switch to DB storage
+        user_dict = get_user_by_id(current_user.id)
+        legacy = (user_dict or {}).get('avatar') or ''
+        legacy_path = None
+        if legacy and legacy != 'db':
+            legacy_path = _os.path.join(UPLOAD_DIR, _os.path.basename(legacy))
+        update_user_avatar(current_user.id, avatar_data=avatar_data, avatar_mime=avatar_mime)
+        if legacy_path and _os.path.exists(legacy_path):
+            try:
+                _os.remove(legacy_path)
+            except OSError:
+                pass
 
     flash('Profile updated successfully.')
     return redirect(url_for('profile'))
