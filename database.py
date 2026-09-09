@@ -91,6 +91,7 @@ def _get_pg_pool():
             kwargs={
                 'row_factory': psycopg.rows.dict_row,
                 'connect_timeout': 8,
+                'autocommit': True,
             },
         )
         _pg_pool.open()
