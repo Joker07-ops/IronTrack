@@ -752,8 +752,9 @@ def require_auth_or_guest():
 
 @app.route('/')
 def home():
-    redir = require_auth_or_guest()
-    if redir: return redir
+    # Visitors land directly on the app in guest (explore) mode, no login wall.
+    if not current_user.is_authenticated:
+        session['guest'] = True
     streak = get_streak(get_uid()) if get_uid() else 0
     active_day_index = streak % 9
     return render_template('index.html', streak=streak, active_day_index=active_day_index,
