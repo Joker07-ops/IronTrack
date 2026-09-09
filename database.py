@@ -1,3 +1,4 @@
+import datetime as _datetime
 import os
 import sqlite3
 
@@ -21,9 +22,15 @@ def _rowify(row):
     if row is None:
         return None
     try:
-        return DbRow(row)
+        d = dict(row)
     except Exception:
-        return DbRow(dict(row))
+        d = dict(row)
+    # Normalize datetime/date columns to ISO strings (matches SQLite storage),
+    # so templates/code that slice or format timestamps work on both backends.
+    for key, value in list(d.items()):
+        if isinstance(value, (_datetime.date, _datetime.datetime)):
+            d[key] = value.isoformat()
+    return DbRow(d)
 
 
 # ── SQLite backend (local development) ──────────────────────────────
