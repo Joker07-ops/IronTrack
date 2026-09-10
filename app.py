@@ -80,7 +80,7 @@ app.config['PREFERRED_URL_SCHEME'] = os.environ.get('PREFERRED_URL_SCHEME', 'htt
 # ── SESSION COOKIE SECURITY ──
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_NAME'] = 'irontrack_session'
+app.config['SESSION_COOKIE_NAME'] = 'its'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'true' if os.environ.get('VERCEL') else 'false').lower() == 'true'
 
 # ── PROFILE PHOTO UPLOADS ──
@@ -277,27 +277,6 @@ def handle_csrf_error(e):
         if ref.netloc == request.host and ref.scheme in ('http', 'https'):
             target = ref._replace(query='').geturl() or ref.geturl()
     return redirect(target or url_for('home'))
-
-
-@app.route('/debug/csrf')
-def debug_csrf():
-    from flask import session as sess
-    from hashlib import sha256
-    key_fp = sha256(app.secret_key.encode()).hexdigest()[:12]
-    cookie_val = request.cookies.get('irontrack_session', 'NONE')
-    has_session = 'csrf_token' in sess
-    session_keys = list(sess.keys())
-    return (
-        f"SECRET_KEY fingerprint: {key_fp}\n"
-        f"Cookie present: {cookie_val != 'NONE'}\n"
-        f"Cookie first 40 chars: {cookie_val[:40]}\n"
-        f"Session keys: {session_keys}\n"
-        f"csrf_token in session: {has_session}\n"
-        f"Request host: {request.host}\n"
-        f"Request scheme: {request.scheme}\n"
-        f"Request URL: {request.url}\n"
-        f"User-Agent: {request.user_agent.string}\n"
-    )
 
 
 def _mail_send(msg, tries=3):
