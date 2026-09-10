@@ -14,6 +14,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 import pyotp
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -253,7 +254,25 @@ def set_security_headers(response):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         csp += '; upgrade-insecure-requests'
     response.headers['Content-Security-Policy'] = csp
+    if response.mimetype == 'text/html':
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
+
+
+# Friendly CSRF failures: flash and bounce back to the form (same-page retry)
+# instead of a bare 400 when a stale/expired/absent session token is submitted.
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    reason = str(e.description or e)
+    audit(None, '', 'csrf_blocked', detail=reason, ip=request.remote_addr)
+    flash('Security token expired or missing. Please try again.', 'error')
+    target = None
+    if request.referrer:
+        from urllib.parse import urlparse
+        ref = urlparse(request.referrer)
+        if ref.netloc == request.host and ref.scheme in ('http', 'https'):
+            target = ref._replace(query='').geturl() or ref.geturl()
+    return redirect(target or url_for('home'))
 
 
 def _mail_send(msg, tries=3):
