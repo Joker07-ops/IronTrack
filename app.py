@@ -279,6 +279,27 @@ def handle_csrf_error(e):
     return redirect(target or url_for('home'))
 
 
+@app.route('/debug/csrf')
+def debug_csrf():
+    from flask import session as sess
+    from hashlib import sha256
+    key_fp = sha256(app.secret_key.encode()).hexdigest()[:12]
+    cookie_val = request.cookies.get('irontrack_session', 'NONE')
+    has_session = 'csrf_token' in sess
+    session_keys = list(sess.keys())
+    return (
+        f"SECRET_KEY fingerprint: {key_fp}\n"
+        f"Cookie present: {cookie_val != 'NONE'}\n"
+        f"Cookie first 40 chars: {cookie_val[:40]}\n"
+        f"Session keys: {session_keys}\n"
+        f"csrf_token in session: {has_session}\n"
+        f"Request host: {request.host}\n"
+        f"Request scheme: {request.scheme}\n"
+        f"Request URL: {request.url}\n"
+        f"User-Agent: {request.user_agent.string}\n"
+    )
+
+
 def _mail_send(msg, tries=3):
     """Send with a short retry loop — absorbs transient DNS/connection blips."""
     for attempt in range(tries):
