@@ -639,20 +639,25 @@ def google_login():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
 
-    # Callback URL. IMPORTANT: it MUST use the exact same origin the user is
-    # browsing on. The OAuth `state` is stored in a session cookie scoped to
-    # that origin, so if the browser is on 127.0.0.1:5000 the callback must
-    # also be 127.0.0.1:5000 (and vice versa for localhost) — otherwise the
-    # cookie isn't sent back and you get "state not equal" CSRF errors.
     scheme = app.config.get('PREFERRED_URL_SCHEME', 'http')
     redirect_uri = f"{scheme}://{request.host}/login/google/authorized"
 
-    # Print the exact URI Google must send the user back to.
-    # Both of these must be registered as Authorized redirect URIs in
-    # Google Cloud Console: http://localhost:5000/... and http://127.0.0.1:5000/...
-    print(f"[Google OAuth] redirect_uri = {redirect_uri}")
+    response = oauth.google.authorize_redirect(redirect_uri)
 
-    return oauth.google.authorize_redirect(redirect_uri)
+    # Store the OAuth state in a signed cookie as backup.
+    # The session cookie can be lost during cross-origin redirects (e.g. to
+    # Google and back), causing MismatchingStateError. A dedicated signed
+    # cookie survives the redirect and lets us recover the state.
+    state = session.get('oauth_state')
+    if state:
+        from itsdangerous import URLSafeTimedSerializer
+        signer = URLSafeTimedSerializer(app.secret_key, salt='oauth-state')
+        signed = signer.dumps(state)
+        response.set_cookie('oauth_state', signed,
+                            httponly=True, secure=app.config['SESSION_COOKIE_SECURE'],
+                            samesite='Lax', max_age=600, path='/')
+
+    return response
 
 
 @app.route('/login/google/authorized')
@@ -661,6 +666,19 @@ def google_authorized():
         flash('Google Sign-In is not configured yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env')
         return redirect(url_for('login'))
     try:
+        # Recover OAuth state from signed cookie if session was lost
+        if 'oauth_state' not in session:
+            signed_state = request.cookies.get('oauth_state')
+            if signed_state:
+                try:
+                    from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+                    signer = URLSafeTimedSerializer(app.secret_key, salt='oauth-state')
+                    state = signer.loads(signed_state, max_age=600)
+                    session['oauth_state'] = state
+                except (SignatureExpired, BadSignature):
+                    flash('Google sign-in failed: security token expired. Please try again.')
+                    return redirect(url_for('login'))
+
         token = oauth.google.authorize_access_token()
         userinfo = token.get('userinfo')
         if not userinfo:
