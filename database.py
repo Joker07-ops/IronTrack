@@ -93,11 +93,11 @@ def _get_pg_pool():
             DATABASE_URL,
             min_size=0,
             max_size=5,
-            timeout=8,
+            timeout=15,
             open=False,
             kwargs={
                 'row_factory': psycopg.rows.dict_row,
-                'connect_timeout': 8,
+                'connect_timeout': 15,
                 'autocommit': True,
             },
         )

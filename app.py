@@ -553,14 +553,18 @@ def register():
         if get_user_by_username(username):
             flash('This username is already taken.')
             return render_template('register.html')
-        password_hash = generate_password_hash(password)
-        verification_token = secrets.token_urlsafe(32)
-        user_id = create_user(name, email, password_hash, verification_token, first_name=first_name, last_name=last_name, username=username)
-        phone = request.form.get('phone', '').strip()
-        if phone:
-            update_user_profile(user_id, name, email, phone=phone, first_name=first_name, last_name=last_name, username=username)
-        seed_default_plan(user_id)
-        audit(user_id, email, 'register', ip=request.remote_addr)
+        try:
+            password_hash = generate_password_hash(password)
+            verification_token = secrets.token_urlsafe(32)
+            user_id = create_user(name, email, password_hash, verification_token, first_name=first_name, last_name=last_name, username=username)
+            phone = request.form.get('phone', '').strip()
+            if phone:
+                update_user_profile(user_id, name, email, phone=phone, first_name=first_name, last_name=last_name, username=username)
+            seed_default_plan(user_id)
+            audit(user_id, email, 'register', ip=request.remote_addr)
+        except Exception as e:
+            flash('Something went wrong. Please try again.')
+            return render_template('register.html')
 
         user = User(get_user_by_id(user_id))
         login_user(user)
