@@ -72,6 +72,7 @@
                 <p>Update your personal details</p>
             </div>
             <form method="POST" action="/profile/update" class="settings-form" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="file" name="avatar" id="avatarInput" accept="image/*" hidden onchange="previewAvatar(event)">
                 <div class="settings-form-row">
                     <div class="form-group">
@@ -206,6 +207,7 @@
             <div class="settings-verify-prompt">
                 <p>Your email isn't verified yet. Verify it to secure your account.</p>
                 <form method="POST" action="/resend-verification">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-outline btn-sm">Resend Verification Email</button>
                 </form>
             </div>
@@ -215,6 +217,7 @@
 
             <h3 class="settings-sub-title">Change Password</h3>
             <form method="POST" action="/profile/change-password" class="settings-form" onsubmit="return validatePasswordMatch(this)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Current Password</label>
                     <div class="input-wrap">
@@ -258,6 +261,7 @@
                 <p>Set your primary fitness objective</p>
             </div>
             <form method="POST" action="/profile/update" class="settings-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="first_name" value="{{ user.get('first_name') or user.name.split()[0] }}">
                 <input type="hidden" name="last_name"  value="{{ user.get('last_name') or (user.name.split(' ',1)[1] if ' ' in user.name else '') }}">
                 <input type="hidden" name="username" value="{{ user.get('username','') }}">
@@ -315,6 +319,7 @@
                 </div>
                 <form method="POST" action="/reset_all_progress"
                     onsubmit="return confirm('Reset ALL progress? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger">Reset Progress</button>
                 </form>
             </div>
@@ -349,6 +354,7 @@
         <h3>Deactivate Account?</h3>
         <p>Your workouts, progress and history are kept safely. You can reactivate any time by logging back in, we'll also email you a reactivation link.</p>
         <form method="POST" action="/account/deactivate">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <select name="reason" class="text-input" style="width:100%">
                 <option value="">Select a reason (optional)</option>
                 {% for r in reasons %}<option value="{{ r }}">{{ r }}</option>{% endfor %}

@@ -40,6 +40,7 @@
             </p>
 
             <form method="POST" action="/account/reactivate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary btn-full">{{ icon('refresh-cw','icon-sm') }} Keep My Account</button>
             </form>
 
@@ -52,6 +53,7 @@
                 Your workouts, progress and history are safe and will be waiting for you.
             </p>
             <form method="POST" action="/account/reactivate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary btn-full">{{ icon('play-circle','icon-sm') }} Reactivate Account</button>
             </form>
             <p class="lifecycle-desc small">

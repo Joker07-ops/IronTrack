@@ -1,0 +1,49 @@
+{% from '_icons.html' import icon %}
+{% extends "auth_base.html" %}
+{% block title %}IronTrack | Set Up Two-Factor Authentication{% endblock %}
+{% block seo_description %}Set up two-factor authentication for your IronTrack admin account.{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-card-header">
+        <h1>SET UP 2FA</h1>
+        <p>Protect your admin account with an authenticator app</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+            <div class="auth-flash">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <ol class="lifecycle-desc" style="text-align:left;padding-left:1.25rem;color:var(--g3);font-size:0.9rem;">
+        <li>Install an authenticator app (Google Authenticator, Authy, 1Password, etc.).</li>
+        <li>Add a new account using the secret below (or use "Enter a setup key").</li>
+        <li>Enter the 6-digit code it shows to finish setup.</li>
+    </ol>
+
+    <div class="settings-divider" style="margin:1rem 0;"></div>
+
+    <p style="color:var(--g3);font-size:0.85rem;margin-bottom:0.4rem;">Manual setup key</p>
+    <p style="font-family:monospace;background:rgba(200,255,0,0.08);border:1px dashed rgba(200,255,0,0.4);padding:0.75rem;border-radius:8px;word-break:break-all;">{{ secret }}</p>
+    <p style="margin-top:0.75rem;font-size:0.85rem;">
+        <a href="{{ otpauth }}" style="color:var(--lime);">Open otpauth:// URI</a>
+        <span style="color:var(--g3);"> (for apps that accept links)</span>
+    </p>
+
+    <form method="POST" action="/admin/2fa/setup" class="auth-form" autocomplete="off" style="margin-top:1.25rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label>Verification Code</label>
+            <div class="input-wrap">
+                {{ icon("shield","icon-input") }}
+                <input type="text" name="code" class="auth-input" placeholder="000000"
+                    required autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" maxlength="8">
+            </div>
+        </div>
+        <button type="submit" class="auth-btn">Enable 2FA &amp; Continue</button>
+    </form>
+
+    <p class="auth-switch"><a href="/logout">← Cancel and sign out</a></p>
+</div>
+{% endblock %}

@@ -74,6 +74,7 @@
     {% endif %}
 
     <form class="fb-reply-form" method="POST" action="/admin/feedback/{{ item.id }}/reply">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
         <textarea class="text-input" name="reply" rows="2" maxlength="4000" placeholder="Write your reply here{% if item.email and mail_enabled %} — it will be emailed to {{ item.email }}{% endif %}...">{{ item.reply or '' }}</textarea>
         <button type="submit" class="btn btn-primary btn-sm">Send {{ icon('send','icon-sm') }}</button>
@@ -82,6 +83,7 @@
     <div class="fb-actions">
         {% if item.status != 'reviewed' %}
         <form method="POST" action="/admin/feedback/{{ item.id }}/mark">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="reviewed">
             <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
             <button type="submit" class="btn btn-outline btn-sm">Mark handled</button>
@@ -89,12 +91,14 @@
         {% endif %}
         {% if item.status != 'new' %}
         <form method="POST" action="/admin/feedback/{{ item.id }}/mark">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="new">
             <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
             <button type="submit" class="btn btn-outline btn-sm">Reopen</button>
         </form>
         {% endif %}
         <form method="POST" action="/admin/feedback/{{ item.id }}/delete" onsubmit="return confirm('Delete this feedback entry permanently?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="filter" value="{{ 'unreplied' if only_unreplied else '' }}">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>

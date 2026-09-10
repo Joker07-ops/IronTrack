@@ -13,6 +13,7 @@
 
     <div class="bmi-form">
         <form method="POST" action="/bmi">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="bmi-form-row">
                 <div class="form-group">
                     <label>Weight (kg)</label>

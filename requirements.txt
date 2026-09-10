@@ -1,6 +1,7 @@
 flask
 flask-login
 flask-mail
+flask-wtf
 werkzeug
 psycopg[binary]
 psycopg-pool
@@ -10,3 +11,4 @@ gunicorn
 authlib
 requests
 flask-limiter
+pyotp

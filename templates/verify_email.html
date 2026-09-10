@@ -1,0 +1,36 @@
+{% from '_icons.html' import icon %}
+{% extends "auth_base.html" %}
+{% block title %}IronTrack | Verify Your Email{% endblock %}
+{% block seo_description %}Verify your email address to secure your IronTrack account.{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-card-header">
+        <h1>VERIFY EMAIL</h1>
+        <p>Confirm your inbox to unlock the full IronTrack experience</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+            <div class="auth-flash">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    {% if verified %}
+        <div class="auth-flash" style="color:var(--lime)">Your email is verified. You're all set!</div>
+    {% else %}
+        <p class="lifecycle-desc">
+            We sent a verification link to your email address. Click the link in the
+            email to verify your account. Until then, a few AI-powered features stay
+            locked — but your workouts and profile work fine.
+        </p>
+
+        <form method="POST" action="/resend-verification" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="auth-btn">Resend Verification Email</button>
+        </form>
+    {% endif %}
+
+    <p class="auth-switch"><a href="/">← Back to home</a></p>
+</div>
+{% endblock %}

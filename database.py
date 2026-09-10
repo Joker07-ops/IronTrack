@@ -186,6 +186,7 @@ def _ensure_users_columns(c):
             ('delete_reason', 'TEXT'), ('delete_requested_at', 'TIMESTAMP'),
             ('restore_token', 'TEXT'), ('avatar', 'TEXT'),
             ('avatar_data', 'BYTEA'), ('avatar_mime', 'TEXT'),
+            ('totp_secret', 'TEXT'),
         ]:
             c.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {ddl}")
     else:
@@ -252,6 +253,10 @@ def _ensure_users_columns(c):
             pass
         try:
             c.execute("ALTER TABLE users ADD COLUMN avatar_mime TEXT")
+        except Exception:
+            pass
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
         except Exception:
             pass
 
@@ -401,6 +406,31 @@ def init_db():
             session_id INTEGER NOT NULL,
             role TEXT NOT NULL,
             content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Security: failed-login tracking (account lockout)
+    c.execute(f"""
+        CREATE TABLE IF NOT EXISTS auth_attempts (
+            {pk},
+            identifier TEXT NOT NULL,
+            failed INTEGER DEFAULT 0,
+            last_fail TIMESTAMP,
+            locked_until TIMESTAMP,
+            UNIQUE(identifier)
+        )
+    """)
+
+    # Security: full audit log of auth/account events
+    c.execute(f"""
+        CREATE TABLE IF NOT EXISTS audit_log (
+            {pk},
+            user_id INTEGER,
+            email TEXT,
+            action TEXT NOT NULL,
+            detail TEXT,
+            ip TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)

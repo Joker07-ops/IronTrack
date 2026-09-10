@@ -16,7 +16,8 @@
         {% endfor %}{% endif %}
     {% endwith %}
 
-    <form method="POST" action="/register" class="auth-form" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+    <form method="POST" action="/register" class="auth-form" onsubmit="if(window.IT_TURNSTILE && !window.IT_TURNSTILE.ready){var f=this;var b=f.querySelector('button[type=submit]');b.disabled=false;setTimeout(function(){f.submit();},500);return false;}this.querySelector('button[type=submit]').disabled=true">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
                 <label>First Name</label>
@@ -58,7 +59,7 @@
             <label>Password</label>
             <div class="input-wrap">
                 {{ icon("lock","icon-input") }}
-                <input type="password" name="password" class="auth-input" placeholder="Min 6 characters" required autocomplete="new-password" maxlength="128" id="regPassword">
+                <input type="password" name="password" class="auth-input" placeholder="Min 8 characters" required autocomplete="new-password" maxlength="128" id="regPassword">
                 <button type="button" class="pw-toggle" onclick="togglePW('regPassword',this)" tabindex="-1" aria-label="Toggle password visibility">{{ icon("eye","icon-input") }}</button>
             </div>
         </div>
@@ -71,9 +72,32 @@
             </div>
         </div>
         <button type="submit" class="auth-btn">Create Account</button>
+        {% if TURNSTILE_ENABLED %}
+        <input type="hidden" name="cf-turnstile-response" id="turnstileToken" value="">
+        {% endif %}
     </form>
 
     <div class="auth-divider"><span>or</span></div>
+
+    {% if TURNSTILE_ENABLED %}
+    <script>
+        window.IT_TURNSTILE = { ready: false };
+        window._turnstileCb = function(token) {
+            document.getElementById('turnstileToken').value = token;
+            window.IT_TURNSTILE.ready = true;
+        };
+        window.onloadTurnstileCallback = function() {
+            turnstile.render(document.getElementById('turnstileWidget'), {
+                sitekey: '{{ TURNSTILE_SITE_KEY }}',
+                size: 'invisible',
+                callback: window._turnstileCb,
+                'error-callback': function() { window.IT_TURNSTILE.ready = true; }
+            });
+        };
+    </script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit" async defer></script>
+    <div id="turnstileWidget"></div>
+    {% endif %}
 
     <a href="/login/google" class="google-btn">
         <svg class="google-btn-icon" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">

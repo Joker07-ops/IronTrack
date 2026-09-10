@@ -32,6 +32,7 @@
 <!-- Add Custom Day -->
 <div class="add-day-bar">
     <form method="POST" action="/add_day" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="day_name" placeholder="New day name e.g. Day 10 (Glutes)" class="text-input" required maxlength="100">
         <button type="submit" class="btn btn-outline btn-sm">+ Add Day</button>
     </form>
@@ -54,6 +55,7 @@
         <h2>{{ selected_day }}</h2>
         <form method="POST" action="/reset_day" style="display:inline;" id="resetDayForm"
               onsubmit="event.preventDefault(); confirmModal('Reset all exercises for this day?', function(){ document.getElementById('resetDayForm').submit(); })">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="day" value="{{ selected_day }}">
             <button type="submit" class="btn btn-danger btn-sm">Reset Day</button>
         </form>
@@ -71,6 +73,7 @@
                 {% if not status %}
                 <form method="POST" action="/mark_complete" style="display:inline;"
                       onsubmit="startRestTimer(event, this)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="day" value="{{ selected_day }}">
                     <input type="hidden" name="exercise" value="{{ exercise }}">
                     <button type="submit" class="btn btn-success btn-sm">Done</button>
@@ -79,6 +82,7 @@
                 <button class="btn btn-ghost btn-sm"
                     onclick="toggleNote('note-{{ loop.index }}')" title="Add note">{{ icon('file-text','icon-xs') }}</button>
                 <form method="POST" action="/remove_exercise" style="display:inline;" class="remove-ex-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="day" value="{{ selected_day }}">
                     <input type="hidden" name="exercise" value="{{ exercise }}">
                     <button type="button" class="btn btn-danger btn-sm"
@@ -90,6 +94,7 @@
         <li class="note-row" id="note-{{ loop.index }}"
             style="{{ '' if notes[exercise] else 'display:none;' }}">
             <form method="POST" action="/save_note" class="note-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="day" value="{{ selected_day }}">
                 <input type="hidden" name="exercise" value="{{ exercise }}">
                 <input type="text" name="note" class="text-input note-input"
@@ -112,6 +117,7 @@
     <div class="add-exercise-form">
         <h3>Add Exercise</h3>
         <form method="POST" action="/add_exercise" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="day" value="{{ selected_day }}">
             <input type="text" name="exercise" placeholder="e.g. Cable Rows" class="text-input" required maxlength="100">
             <button type="submit" class="btn btn-primary">Add</button>

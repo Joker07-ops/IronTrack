@@ -134,6 +134,7 @@
         <h2 class="section-title">GIVE<br><span>FEEDBACK</span></h2>
     </div>
     <form class="feedback-form" method="POST" action="/feedback">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="bmi-form-row">
             <div class="form-group">
                 <label for="fb-category">Category</label>

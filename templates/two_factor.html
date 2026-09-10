@@ -1,0 +1,34 @@
+{% from '_icons.html' import icon %}
+{% extends "auth_base.html" %}
+{% block title %}IronTrack | Two-Factor Verification{% endblock %}
+{% block seo_description %}Enter your verification code to securely sign in to IronTrack.{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-card-header">
+        <h1>2FA REQUIRED</h1>
+        <p>Enter the 6-digit code from your authenticator app</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+            <div class="auth-flash">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/admin/2fa" class="auth-form" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label>Verification Code</label>
+            <div class="input-wrap">
+                {{ icon("shield","icon-input") }}
+                <input type="text" name="code" class="auth-input" placeholder="000000"
+                    required autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" maxlength="8">
+            </div>
+        </div>
+        <button type="submit" class="auth-btn">Verify &amp; Continue</button>
+    </form>
+
+    <p class="auth-switch"><a href="/logout">← Cancel and sign out</a></p>
+</div>
+{% endblock %}

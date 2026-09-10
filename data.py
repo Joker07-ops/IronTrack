@@ -749,3 +749,109 @@ def delete_feedback(feedback_id):
     c.execute("DELETE FROM feedback WHERE id=?", (feedback_id,))
     conn.commit()
     conn.close()
+
+
+# ── SECURITY: LOCKOUT, AUDIT, 2FA ────────────────────
+
+AUTH_MAX_FAILURES = 5
+AUTH_LOCK_MINUTES = 15
+
+
+def _parse_ts(ts):
+    """Return a datetime regardless of whether `ts` is a string or datetime."""
+    if ts is None:
+        return None
+    if isinstance(ts, datetime):
+        return ts
+    try:
+        return datetime.fromisoformat(str(ts))
+    except (ValueError, TypeError):
+        return None
+
+
+def auth_locked_seconds(identifier):
+    """Return remaining lockout seconds, or 0 if not locked."""
+    if not identifier:
+        return 0
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT locked_until FROM auth_attempts WHERE identifier=?", (identifier,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return 0
+    locked_until = _parse_ts(row.get('locked_until') if isinstance(row, dict) else None)
+    if locked_until:
+        remaining = (locked_until - datetime.utcnow()).total_seconds()
+        if remaining > 0:
+            return int(remaining)
+    return 0
+
+
+def record_auth_failure(identifier, ip=''):
+    """Increment failure count; lock when threshold exceeded. Returns True if now locked."""
+    if not identifier:
+        return False
+    now = datetime.utcnow().isoformat()
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, failed FROM auth_attempts WHERE identifier=?", (identifier,))
+    row = c.fetchone()
+    locked = False
+    if row:
+        failed = (row['failed'] or 0) + 1
+        if failed >= AUTH_MAX_FAILURES:
+            locked_until = (datetime.utcnow() + timedelta(minutes=AUTH_LOCK_MINUTES)).isoformat()
+            locked = True
+        else:
+            locked_until = None
+        c.execute("UPDATE auth_attempts SET failed=?, last_fail=?, locked_until=? WHERE id=?",
+                  (failed, now, locked_until, row['id']))
+    else:
+        c.execute("INSERT INTO auth_attempts (identifier, failed, last_fail, locked_until) VALUES (?, 1, ?, NULL)",
+                  (identifier, now))
+    conn.commit()
+    conn.close()
+    return locked
+
+
+def clear_auth_failures(identifier):
+    if not identifier:
+        return
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE auth_attempts SET failed=0, locked_until=NULL WHERE identifier=?", (identifier,))
+    conn.commit()
+    conn.close()
+
+
+def audit(user_id, email, action, detail='', ip=''):
+    """Best-effort audit log — never raises."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("INSERT INTO audit_log (user_id, email, action, detail, ip) VALUES (?, ?, ?, ?, ?)",
+                  (user_id, email, action, detail, ip))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def get_totp_secret(user_id):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT totp_secret FROM users WHERE id=?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return ''
+    return row.get('totp_secret') or ''
+
+
+def set_totp_secret(user_id, secret):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE users SET totp_secret=? WHERE id=?", (secret, user_id))
+    conn.commit()
+    conn.close()

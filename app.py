@@ -1,3 +1,4 @@
+import hashlib
 import os
 import json as json_mod
 import secrets
@@ -5,10 +6,15 @@ import random
 import socket
 import time as time_mod
 import mimetypes
+import math
+import urllib.request, urllib.error
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
+from flask_wtf import CSRFProtect
+import pyotp
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -37,7 +43,10 @@ from data import (
     reactivate_account, delete_user_data, cleanup_expired_deletions,
     save_feedback, get_feedback, get_feedback_by_id, count_unreplied_feedback,
     set_feedback_reply, set_feedback_status, delete_feedback,
-    update_user_avatar
+    update_user_avatar,
+    auth_locked_seconds, record_auth_failure, clear_auth_failures,
+    audit, get_totp_secret, set_totp_secret,
+    AUTH_LOCK_MINUTES
 )
 from authlib.integrations.flask_client import OAuth
 from exercises import EXERCISES
@@ -99,7 +108,8 @@ ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').sp
 
 
 def is_admin():
-    return current_user.is_authenticated and (current_user.email or '').lower() in ADMIN_EMAILS
+    return (current_user.is_authenticated and session.get('admin_2fa') and
+            (current_user.email or '').lower() in ADMIN_EMAILS)
 
 
 def avatar_url(user):
@@ -124,7 +134,8 @@ def avatar_url(user):
 def inject_site_globals():
     base = SITE_URL or request.url_root.rstrip('/')
     return dict(site_base=base, SITE_URL=SITE_URL, now=datetime.now(), is_admin=is_admin(),
-                avatar_url=avatar_url)
+                avatar_url=avatar_url,
+                TURNSTILE_SITE_KEY=TURNSTILE_SITE_KEY, TURNSTILE_ENABLED=TURNSTILE_ENABLED)
 
 
 @app.route('/avatar/<int:user_id>')
@@ -151,6 +162,74 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
+# ── CSRF PROTECTION ──
+csrf = CSRFProtect(app)
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+# ── CLOUDFLARE TURNSTILE (invisible CAPTCHA) ──
+TURNSTILE_SITE_KEY   = (os.environ.get('TURNSTILE_SITE_KEY')   or '').strip()
+TURNSTILE_SECRET_KEY = (os.environ.get('TURNSTILE_SECRET_KEY') or '').strip()
+TURNSTILE_ENABLED    = bool(TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY)
+
+
+def _verify_turnstile():
+    if not TURNSTILE_ENABLED:
+        return True
+    token = request.form.get('cf-turnstile-response', '')
+    if not token:
+        return False
+    try:
+        payload = urlencode({'secret': TURNSTILE_SECRET_KEY, 'response': token,
+                             'remoteip': request.remote_addr}).encode()
+        req = urllib.request.Request('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+                                    data=payload)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json_mod.loads(r.read().decode())
+        return bool(data.get('success'))
+    except Exception:
+        return False
+
+
+# ── PASSWORD SECURITY ──
+MIN_PASSWORD_LENGTH = 8
+
+COMMON_PASSWORDS = frozenset({
+    '123456','password','12345678','qwerty','123456789','12345','1234','111111',
+    '1234567','dragon','123123','baseball','abc123','football','letmein','shadow',
+    'master','666666','qwertyuiop','123321','mustang','1234567890','michael',
+    '654321','superman','1qaz2wsx','7777777','121212','000000','qazwsx',
+    '123qwe','killer','trustno1','jordan','jennifer','zxcvbnm','asdfgh',
+    'hunter','buster','soccer','harley','batman','andrew','tigger','sunshine',
+    'iloveyou','2000','charlie','robert','thomas','hockey','ranger','daniel',
+    'starwars','klaster','112233','george','computer','michelle','jessica',
+    'pepper','1111','zxcvbn','555555','11111111','131313','freedom','777777',
+    'pass','maggie','159753','aaaaaa','ginger','princess','joshua','cheese',
+    'amanda','summer','love','ashley','nicole','chelsea','biteme','matthew',
+    'access','yankees','987654321','dallas','austin','thunder','taylor',
+    'matrix','mobilemail','mom','monitor','monitoring','montana','moon','moscow',
+})
+
+
+def _password_feedback(password):
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f'Password must be at least {MIN_PASSWORD_LENGTH} characters.'
+    if password.lower() in COMMON_PASSWORDS:
+        return 'That password is too common. Please choose a stronger one.'
+    if len(password) <= 128:
+        try:
+            digest = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+            prefix, suffix = digest[:5], digest[5:]
+            req = urllib.request.Request(f'https://api.pwnedpasswords.com/range/{prefix}')
+            req.add_header('User-Agent', 'IronTrack/Security')
+            with urllib.request.urlopen(req, timeout=6) as r:
+                body = r.read().decode('latin-1')
+            if suffix in {line.split(':')[0] for line in body.splitlines()}:
+                return 'This password has appeared in a data breach. Pick a different one.'
+        except Exception:
+            pass  # fail-open: never block signup over a network hiccup
+    return ''
+
+
 # ── SECURITY HEADERS ──
 @app.after_request
 def set_security_headers(response):
@@ -158,9 +237,22 @@ def set_security_headers(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(self), microphone=(), geolocation=(), payment=()'
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com; "
+        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    )
     if SITE_URL.startswith('https'):
         app.config['SESSION_COOKIE_SECURE'] = True
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        csp += '; upgrade-insecure-requests'
+    response.headers['Content-Security-Policy'] = csp
     return response
 
 
@@ -410,6 +502,9 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     if request.method == 'POST':
+        if not _verify_turnstile():
+            flash('CAPTCHA check failed. Please try again.')
+            return render_template('register.html')
         first_name = request.form.get('first_name', '').strip()
         last_name  = request.form.get('last_name', '').strip()
         name       = f"{first_name} {last_name}".strip()
@@ -425,8 +520,9 @@ def register():
         if password != confirm:
             flash('Passwords do not match.')
             return render_template('register.html')
-        if len(password) < 6:
-            flash('Password must be at least 6 characters.')
+        pw_err = _password_feedback(password)
+        if pw_err:
+            flash(pw_err)
             return render_template('register.html')
         if get_user_by_email(email):
             flash('An account with this email already exists.')
@@ -441,6 +537,7 @@ def register():
         if phone:
             update_user_profile(user_id, name, email, phone=phone, first_name=first_name, last_name=last_name, username=username)
         seed_default_plan(user_id)
+        audit(user_id, email, 'register', ip=request.remote_addr)
 
         user = User(get_user_by_id(user_id))
         login_user(user)
@@ -460,15 +557,44 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     if request.method == 'POST':
+        if not _verify_turnstile():
+            flash('CAPTCHA check failed. Please try again.')
+            return render_template('login.html')
         login_id = request.form.get('login_id', '').strip().lower()
         password = request.form.get('password', '')
         remember = request.form.get('remember') == 'on'
+
+        if auth_locked_seconds(login_id) > 0:
+            secs = auth_locked_seconds(login_id)
+            mins = math.ceil(secs / 60)
+            flash(f'Too many failed attempts. Try again in about {mins} minute(s).')
+            return render_template('login.html')
+
         user_dict = get_user_by_email(login_id)
         if not user_dict:
             user_dict = get_user_by_username(login_id)
         if not user_dict or not check_password_hash(user_dict['password_hash'], password):
-            flash('Invalid email/username or password.')
+            record_auth_failure(login_id, request.remote_addr)
+            if auth_locked_seconds(login_id) > 0:
+                audit(user_dict['id'] if user_dict else None, login_id, 'login_locked',
+                      'account locked after repeated failures', request.remote_addr)
+                flash(f'Too many failed attempts. Account locked for {AUTH_LOCK_MINUTES} minutes.')
+            else:
+                flash('Invalid email/username or password.')
             return render_template('login.html')
+
+        clear_auth_failures(login_id)
+        audit(user_dict['id'], user_dict['email'], 'login',
+              'password login', request.remote_addr)
+
+        # Admin accounts must pass TOTP 2FA before their session is established
+        if _is_admin_email(user_dict.get('email')):
+            if not user_dict.get('totp_secret'):
+                session['2fa_pending_id'] = user_dict['id']
+                return redirect(url_for('two_factor_setup'))
+            session['2fa_pending_id'] = user_dict['id']
+            return redirect(url_for('two_factor'))
+
         login_user(User(user_dict), remember=remember)
         session.pop('guest', None)
         # Deactivated / pending deletion accounts land on the account-status page
@@ -528,6 +654,13 @@ def google_authorized():
         # 1. Existing user already linked to this Google account
         user_dict = get_user_by_google_id(google_id)
         if user_dict:
+            audit(user_dict['id'], user_dict['email'], 'login', 'google login', request.remote_addr)
+            if _is_admin_email(user_dict.get('email')):
+                if not user_dict.get('totp_secret'):
+                    session['2fa_pending_id'] = user_dict['id']
+                    return redirect(url_for('two_factor_setup'))
+                session['2fa_pending_id'] = user_dict['id']
+                return redirect(url_for('two_factor'))
             login_user(User(user_dict))
             session.pop('guest', None)
             if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
@@ -538,6 +671,13 @@ def google_authorized():
         user_dict = get_user_by_email(email)
         if user_dict:
             link_google_id(user_dict['id'], google_id)
+            audit(user_dict['id'], user_dict['email'], 'google_link', ip=request.remote_addr)
+            if _is_admin_email(user_dict.get('email')):
+                if not user_dict.get('totp_secret'):
+                    session['2fa_pending_id'] = user_dict['id']
+                    return redirect(url_for('two_factor_setup'))
+                session['2fa_pending_id'] = user_dict['id']
+                return redirect(url_for('two_factor'))
             login_user(User(user_dict))
             session.pop('guest', None)
             flash('Google account linked to your existing login.')
@@ -550,7 +690,14 @@ def google_authorized():
                                      username=email.split('@')[0] if email else 'user',
                                      first_name=first_name, last_name=last_name)
         seed_default_plan(user_id)
+        audit(user_id, email, 'register', 'google', request.remote_addr)
         user_dict = get_user_by_id(user_id)
+        if _is_admin_email(email):
+            if not user_dict.get('totp_secret'):
+                session['2fa_pending_id'] = user_dict['id']
+                return redirect(url_for('two_factor_setup'))
+            session['2fa_pending_id'] = user_dict['id']
+            return redirect(url_for('two_factor'))
         login_user(User(user_dict))
         session.pop('guest', None)
         flash('Welcome! Your account was created with Google.')
@@ -565,8 +712,10 @@ def google_authorized():
 @app.route('/logout')
 @login_required
 def logout():
+    audit(current_user.id, current_user.email, 'logout', ip=request.remote_addr)
     logout_user()
     session.pop('guest', None)
+    session.pop('admin_2fa', None)
     return redirect(url_for('login'))
 
 
@@ -631,6 +780,7 @@ def forgot_password():
         email = request.form.get('email', '').strip().lower()
         user_dict = get_user_by_email(email)
         if user_dict:
+            audit(user_dict['id'], user_dict['email'], 'password_reset_requested', ip=request.remote_addr)
             token = secrets.token_urlsafe(32)
             expiry = datetime.utcnow() + timedelta(hours=1)
             set_reset_token(email, token, expiry)
@@ -678,13 +828,15 @@ def reset_password(token):
     if request.method == 'POST':
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm', '')
-        if len(password) < 6:
-            flash('Password must be at least 6 characters.')
+        pw_err = _password_feedback(password)
+        if pw_err:
+            flash(pw_err)
             return render_template('reset_password.html', token=token)
         if password != confirm:
             flash('Passwords do not match.')
             return render_template('reset_password.html', token=token)
         update_password(user_dict['id'], generate_password_hash(password))
+        audit(user_dict['id'], user_dict['email'], 'password_reset', ip=request.remote_addr)
         flash('Password updated. Please log in.')
         return redirect(url_for('login'))
     return render_template('reset_password.html', token=token)
@@ -698,6 +850,7 @@ def verify_email(token):
         return redirect(url_for('login'))
 
     verify_user_email(user_dict['id'])
+    audit(user_dict['id'], user_dict['email'], 'email_verified', ip=request.remote_addr)
     flash('Email verified successfully! 🎉')
 
     if current_user.is_authenticated:
@@ -744,6 +897,18 @@ def require_auth_or_guest():
     if not current_user.is_authenticated and not session.get('guest'):
         return redirect(url_for('login'))
     return None
+
+
+def require_verified(f):
+    """Gate: allow guests (read-only), require verified email for authenticated users."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if current_user.is_authenticated and not current_user.is_verified:
+            flash('Please verify your email to use this feature.')
+            return redirect(url_for('verify_page'))
+        return f(*args, **kwargs)
+    return wrapper
 
 
 
@@ -879,6 +1044,7 @@ def workout():
 
 
 @app.route('/mark_complete', methods=['POST'])
+@require_verified
 @login_required
 def mark_complete_route():
     day = request.form.get('day')
@@ -891,6 +1057,7 @@ def mark_complete_route():
 
 
 @app.route('/add_exercise', methods=['POST'])
+@require_verified
 @login_required
 def add_exercise_route():
     day = request.form.get('day')
@@ -902,6 +1069,7 @@ def add_exercise_route():
 
 
 @app.route('/remove_exercise', methods=['POST'])
+@require_verified
 @login_required
 def remove_exercise_route():
     day = request.form.get('day')
@@ -914,6 +1082,7 @@ def remove_exercise_route():
 
 
 @app.route('/reset_day', methods=['POST'])
+@require_verified
 @login_required
 def reset_day_route():
     day = request.form.get('day')
@@ -925,6 +1094,7 @@ def reset_day_route():
 
 
 @app.route('/save_note', methods=['POST'])
+@require_verified
 @login_required
 def save_note_route():
     exercise = request.form.get('exercise')
@@ -938,6 +1108,7 @@ def save_note_route():
 
 
 @app.route('/add_day', methods=['POST'])
+@require_verified
 @login_required
 def add_day():
     day_name = request.form.get('day_name', '').strip()
@@ -966,6 +1137,7 @@ def templates_page():
 
 
 @app.route('/templates/apply/<template_id>', methods=['POST'])
+@require_verified
 @login_required
 def apply_template(template_id):
     template = WORKOUT_TEMPLATES.get(template_id)
@@ -1040,6 +1212,7 @@ def exercise_detail(name):
 
 
 @app.route('/assistant')
+@require_verified
 def assistant():
     redir = require_auth_or_guest()
     if redir: return redir
@@ -1067,6 +1240,7 @@ def api_chat_sessions():
 
 
 @app.route('/api/chat/sessions', methods=['POST'])
+@require_verified
 def api_chat_create_session():
     uid = _auth_user_id()
     if uid is None:
@@ -1088,6 +1262,7 @@ def api_chat_session(session_id):
 
 
 @app.route('/api/chat/sessions/<int:session_id>', methods=['DELETE'])
+@require_verified
 def api_chat_delete_session(session_id):
     uid = _auth_user_id()
     if uid is None:
@@ -1097,6 +1272,7 @@ def api_chat_delete_session(session_id):
 
 
 @app.route('/assistant/chat', methods=['POST'])
+@require_verified
 def assistant_chat():
     if not current_user.is_authenticated and not session.get('guest'):
         return jsonify({'error': 'Not authorized'})
@@ -1162,6 +1338,7 @@ Guardrails:
 
 
 @app.route('/generate_workout', methods=['POST'])
+@require_verified
 @login_required
 def generate_workout():
     data = request.get_json()
@@ -1214,6 +1391,7 @@ def api_summary_data():
 
 
 @app.route('/generate_exercise_details/<name>', methods=['POST'])
+@require_verified
 def generate_exercise_details(name):
     if not current_user.is_authenticated and not session.get('guest'):
         return jsonify({'error': 'Not authorized'})
@@ -1360,6 +1538,7 @@ def account_delete_confirm():
     if reason not in DELETE_REASONS and reason != '':
         reason = 'Something else'
     grant_delete_grace(current_user.id, reason if reason else None)
+    audit(current_user.id, current_user.email, 'delete_requested', detail=reason or '', ip=request.remote_addr)
     user_dict = get_user_by_id(current_user.id)
     token = set_restore_token(current_user.id)
     try:
@@ -1457,8 +1636,9 @@ def change_password():
         flash('Current password is incorrect.')
         return redirect(url_for('profile'))
 
-    if len(new_pw) < 6:
-        flash('New password must be at least 6 characters.')
+    pw_err = _password_feedback(new_pw)
+    if pw_err:
+        flash(pw_err)
         return redirect(url_for('profile'))
 
     if new_pw != confirm_pw:
@@ -1466,6 +1646,7 @@ def change_password():
         return redirect(url_for('profile'))
 
     update_password(current_user.id, generate_password_hash(new_pw))
+    audit(current_user.id, current_user.email, 'password_change', ip=request.remote_addr)
     flash('Password changed successfully.')
     return redirect(url_for('profile'))
 
@@ -1481,6 +1662,77 @@ def reset_all_progress():
             save_progress(current_user.id, day, exercise, False)
     flash('All progress has been reset.')
     return redirect(url_for('profile'))
+
+
+# ── EMAIL VERIFICATION GATE ──────────────────
+
+@app.route('/verify')
+@login_required
+def verify_page():
+    user_dict = get_user_by_id(current_user.id)
+    return render_template('verify_email.html', verified=bool(user_dict.get('is_verified')))
+
+
+# ── ADMIN TOTP 2FA ──────────────────────────
+
+def _is_admin_email(email):
+    return (email or '').lower() in ADMIN_EMAILS
+
+
+def _resolve_admin_user():
+    """Return user dict if the current 2FA-pending session targets an admin, else None."""
+    uid = session.get('2fa_pending_id')
+    if not uid:
+        return None
+    user_dict = get_user_by_id(uid)
+    if user_dict and _is_admin_email(user_dict.get('email')):
+        return user_dict
+    return None
+
+
+@app.route('/admin/2fa', methods=['GET', 'POST'])
+def two_factor():
+    user_dict = _resolve_admin_user()
+    if not user_dict:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        secret = get_totp_secret(user_dict['id'])
+        if secret and pyotp.TOTP(secret).verify(code, valid_window=1):
+            login_user(User(user_dict))
+            session.pop('2fa_pending_id', None)
+            session['admin_2fa'] = True
+            audit(user_dict['id'], user_dict['email'], '2fa_login', ip=request.remote_addr)
+            if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
+                return redirect(url_for('account_status'))
+            return redirect(request.args.get('next') or url_for('home'))
+        audit(user_dict['id'], user_dict['email'], '2fa_failed', ip=request.remote_addr)
+        flash('Invalid verification code. Please try again.')
+    return render_template('two_factor.html')
+
+
+@app.route('/admin/2fa/setup', methods=['GET', 'POST'])
+def two_factor_setup():
+    user_dict = _resolve_admin_user()
+    if not user_dict:
+        return redirect(url_for('login'))
+    secret = get_totp_secret(user_dict['id'])
+    if not secret:
+        secret = pyotp.random_base32()
+        set_totp_secret(user_dict['id'], secret)
+    otpauth = pyotp.totp.TOTP(secret).provisioning_uri(name=user_dict['email'], issuer_name='IronTrack')
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        if pyotp.TOTP(secret).verify(code, valid_window=1):
+            login_user(User(user_dict))
+            session.pop('2fa_pending_id', None)
+            session['admin_2fa'] = True
+            audit(user_dict['id'], user_dict['email'], '2fa_setup_complete', ip=request.remote_addr)
+            if user_dict.get('account_status') in ('deactivated', 'pending_delete'):
+                return redirect(url_for('account_status'))
+            return redirect(url_for('home'))
+        flash('Incorrect code — please scan the secret into your authenticator app and try again.')
+    return render_template('two_factor_setup.html', secret=secret, otpauth=otpauth)
 
 
 if __name__ == '__main__':

@@ -17,6 +17,7 @@
     <meta name="application-name" content="IronTrack">
     <meta name="theme-color" content="#040404">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f1f1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 
     {# Apple / PWA #}
@@ -92,6 +93,30 @@
             document.documentElement.setAttribute('data-theme', t);
         })();
     </script>
+    <script>
+        // ── CSRF FOR FETCH CALLS ──
+        // Auto-attach the CSRF token header to every non-GET fetch()
+        // so the assistant/API endpoints keep working under CSRFProtect.
+        (function() {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            var token = meta ? meta.getAttribute('content') : '';
+            if (!token) return;
+            var origFetch = window.fetch;
+            window.fetch = function(url, opts) {
+                opts = opts || {};
+                var method = (opts.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+                    opts.headers = opts.headers || {};
+                    if (opts.headers instanceof Headers) {
+                        if (!opts.headers.has('X-CSRFToken')) opts.headers.set('X-CSRFToken', token);
+                    } else if (!opts.headers['X-CSRFToken']) {
+                        opts.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return origFetch.call(this, url, opts);
+            };
+        })();
+    </script>
     <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/style.css">
     <style>
@@ -153,6 +178,7 @@
     <span>{{ icon('mail','icon-xs') }} Please verify your email check your inbox.</span>
     <div class="guest-banner-actions">
         <form method="POST" action="/resend-verification" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="guest-banner-btn">Resend Email</button>
         </form>
     </div>
