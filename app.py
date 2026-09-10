@@ -166,6 +166,10 @@ limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="m
 # ── CSRF PROTECTION ──
 csrf = CSRFProtect(app)
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+# The per-session token is the actual CSRF defense. Disable the extra
+# Referer requirement (WTF_CSRF_SSL_STRICT): privacy browsers & extensions
+# strip Referer, which would reject legitimate submissions.
+app.config['WTF_CSRF_SSL_STRICT'] = False
 
 # ── CLOUDFLARE TURNSTILE (invisible CAPTCHA) ──
 TURNSTILE_SITE_KEY   = (os.environ.get('TURNSTILE_SITE_KEY')   or '').strip()
