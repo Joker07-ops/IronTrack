@@ -75,6 +75,12 @@ if not secret_key:
             # Read-only filesystem on serverless: sessions simply reset per instance.
             pass
 app.secret_key = secret_key
+
+# ── Log SECRET_KEY fingerprint at startup (does NOT log the key itself) ──
+import hashlib as _hashlib
+_sk_fp = _hashlib.sha256(secret_key.encode()).hexdigest()[:12]
+print(f"[startup] SECRET_KEY fingerprint={_sk_fp}  source={'env' if os.environ.get('SECRET_KEY') else 'file-or-generated'}")
+
 app.config['PREFERRED_URL_SCHEME'] = os.environ.get('PREFERRED_URL_SCHEME', 'https' if os.environ.get('VERCEL') else 'http')
 
 # ── SESSION COOKIE SECURITY ──
@@ -269,6 +275,8 @@ def set_security_headers(response):
 def handle_csrf_error(e):
     reason = str(e.description or e)
     audit(None, '', 'csrf_blocked', detail=reason, ip=request.remote_addr)
+    app.logger.warning('CSRF blocked: reason=%s key_fp=%s cookies=%s session_keys=%s',
+                       reason, _sk_fp, list(request.cookies.keys()), list(session.keys()))
     flash('Security token expired or missing. Please try again.', 'error')
     target = None
     if request.referrer:
@@ -277,6 +285,29 @@ def handle_csrf_error(e):
         if ref.netloc == request.host and ref.scheme in ('http', 'https'):
             target = ref._replace(query='').geturl() or ref.geturl()
     return redirect(target or url_for('home'))
+
+
+@app.route('/csrf-diag')
+def csrf_diag():
+    """Public diagnostic — shows server-side CSRF/session state (no secrets)."""
+    from hmac import compare_digest
+    its_cookie = request.cookies.get('its', '')
+    old_cookie = request.cookies.get('irontrack_session', '')
+    cookie_name = 'its' if its_cookie else ('irontrack_session' if old_cookie else 'none')
+    cookie_prefix = (its_cookie or old_cookie)[:40]
+    sk_env = bool(os.environ.get('SECRET_KEY'))
+    return (
+        f"SECRET_KEY env set: {sk_env}\n"
+        f"SECRET_KEY fingerprint: {_sk_fp}\n"
+        f"Cookie name: {cookie_name}\n"
+        f"Cookie prefix (first 40 chars): {cookie_prefix}\n"
+        f"Session keys: {list(session.keys())}\n"
+        f"csrf_token in session: {'csrf_token' in session}\n"
+        f"request.host: {request.host}\n"
+        f"request.scheme: {request.scheme}\n"
+        f"SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}\n"
+        f"SameSite: {app.config.get('SESSION_COOKIE_SAMESITE')}\n"
+    ), 200, {'Content-Type': 'text/plain'}
 
 
 def _mail_send(msg, tries=3):
