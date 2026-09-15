@@ -1963,6 +1963,50 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .bs-card-header h3 { font-family: var(--font-display); font-size: var(--text-h4); color: var(--white); display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
 .bs-card-header p { font-size: var(--text-sm); color: var(--g3); }
 
+/* ── Reference Guide ── */
+.bs-ref-card { padding: var(--space-6); }
+.bs-ref-header { margin-bottom: var(--space-5); }
+.bs-ref-header h3 { font-family: var(--font-display); font-size: var(--text-h5); color: var(--white); display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.bs-ref-header p { font-size: var(--text-xs); color: var(--g3); }
+.bs-ref-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-3); }
+.bs-ref-item {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-2); border-radius: var(--r-md);
+    border: 1px solid transparent; transition: all var(--t) var(--ease); cursor: default;
+}
+.bs-ref-item:hover { border-color: var(--line2); background: var(--card2); }
+.bs-ref-silhouette { width: 36px; height: 56px; color: var(--g2); transition: color var(--t) var(--ease); }
+.bs-ref-item:hover .bs-ref-silhouette { color: var(--lime); }
+.bs-ref-silhouette svg { width: 100%; height: 100%; }
+.bs-ref-name { font-family: var(--font-ui); font-size: 0.65rem; color: var(--g3); text-align: center; letter-spacing: var(--ls-wide); line-height: 1.2; }
+
+/* ── Live Body Preview ── */
+.bs-preview-card { padding: var(--space-6); text-align: center; }
+.bs-preview-card h3 { font-family: var(--font-display); font-size: var(--text-h5); color: var(--white); display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin-bottom: var(--space-4); }
+.bs-preview { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.bs-preview-figure { width: 120px; height: 220px; }
+.bs-preview-figure svg { width: 100%; height: 100%; }
+#previewBody { transition: d 0.3s var(--ease); }
+.bs-preview-shape { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--g3); }
+
+/* ── Section Dividers ── */
+.bs-section { margin-bottom: var(--space-2); }
+.bs-section-label {
+    font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: var(--ls-wider); color: var(--g3);
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+.bs-section-label .icon { color: var(--lime); width: 14px; height: 14px; }
+.bs-section-line {
+    height: 1px; background: linear-gradient(90deg, transparent, var(--line2), transparent);
+    margin: var(--space-5) 0;
+}
+
+/* ── Gender Icons ── */
+.bs-gender-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* ── Form Fields ── */
 .bs-field { margin-bottom: var(--space-5); flex: 1; }
 .bs-label { display: block; font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--ls-wider); color: var(--g2); margin-bottom: var(--space-2); }
 .bs-hint { display: block; font-size: var(--text-xs); color: var(--g3); margin-top: var(--space-1); }
@@ -1984,8 +2028,18 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 
 .bs-results-grid { display: flex; flex-direction: column; gap: var(--space-5); }
 
+/* ── Shape Result Card ── */
 .bs-shape-card { text-align: center; padding: var(--space-10); border: 1px solid; animation: fadeUp 0.5s var(--ease-out); }
-.bs-shape-icon { font-size: 3.5rem; margin-bottom: var(--space-3); }
+.bs-shape-avatar { width: 120px; height: 200px; margin: 0 auto var(--space-4); }
+.bs-shape-avatar svg { width: 100%; height: 100%; }
+.bs-result-silhouette { fill: currentColor; opacity: 0.9; }
+.bs-sil-hourglass { color: var(--lime); }
+.bs-sil-pear { color: var(--emerald); }
+.bs-sil-apple { color: var(--amber); }
+.bs-sil-rectangle { color: var(--blue); }
+.bs-sil-inverted_triangle { color: var(--lime); }
+.bs-sil-triangle { color: var(--emerald); }
+.bs-shape-icon { font-size: 3.5rem; margin-bottom: var(--space-3); display: none; }
 .bs-shape-name { font-family: var(--font-display); font-size: var(--text-h2); color: var(--white); margin-bottom: var(--space-2); }
 .bs-shape-desc { font-size: var(--text-body); color: var(--g2); line-height: var(--lh-relaxed); max-width: 500px; margin: 0 auto; }
 
@@ -2045,6 +2099,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .bs-empty p { font-size: var(--text-body); }
 
 @media (max-width: 768px) {
+    .bs-ref-grid { grid-template-columns: repeat(3, 1fr); }
     .bs-field-row { flex-direction: column; gap: 0; }
     .bs-radio-row { flex-direction: column; }
     .bs-stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2052,6 +2107,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
     .bs-shape-card { padding: var(--space-8); }
 }
 @media (max-width: 480px) {
+    .bs-ref-grid { grid-template-columns: repeat(3, 1fr); }
     .bs-stats-grid { grid-template-columns: 1fr 1fr; }
     .bs-tab { padding: 0.5rem 0.8rem; font-size: var(--text-xs); }
 }

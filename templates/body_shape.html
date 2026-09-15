@@ -26,78 +26,168 @@
 
     {# ── TAB 1: MEASUREMENT FORM ── #}
     <div class="bs-tab-content" id="bs-form">
-        <div class="bs-card">
-            <div class="bs-card-header">
-                <h3>{{ icon('user', 'icon-sm') }} Body Measurements</h3>
-                <p>All fields marked with * are required. Optional measurements improve accuracy.</p>
+
+        {# ── BODY SHAPE REFERENCE GUIDE ── #}
+        <div class="bs-card bs-ref-card">
+            <div class="bs-ref-header">
+                <h3>{{ icon('info', 'icon-sm') }} Body Shape Guide</h3>
+                <p>See which shape matches your proportions</p>
             </div>
+            <div class="bs-ref-grid">
+                <div class="bs-ref-item" data-shape="hourglass">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C20 5, 14 15, 14 25 C14 35, 22 40, 20 48 C18 56, 12 58, 14 70 C16 82, 22 92, 30 95 C38 92, 44 82, 46 70 C48 58, 42 56, 40 48 C38 40, 46 35, 46 25 C46 15, 40 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Hourglass</span>
+                </div>
+                <div class="bs-ref-item" data-shape="pear">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C22 5, 18 15, 18 25 C18 35, 24 38, 23 45 C22 52, 20 56, 16 65 C12 74, 10 82, 14 92 C18 96, 26 98, 30 98 C34 98, 42 96, 46 92 C50 82, 48 74, 44 65 C40 56, 38 52, 37 45 C36 38, 42 35, 42 25 C42 15, 38 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Pear</span>
+                </div>
+                <div class="bs-ref-item" data-shape="apple">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C22 5, 18 15, 18 25 C18 32, 20 36, 16 48 C12 60, 10 70, 14 82 C18 92, 24 96, 30 97 C36 96, 42 92, 46 82 C50 70, 48 60, 44 48 C40 36, 42 32, 42 25 C42 15, 38 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Apple</span>
+                </div>
+                <div class="bs-ref-item" data-shape="rectangle">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C24 5, 20 15, 20 25 C20 35, 20 42, 20 48 C20 56, 18 60, 18 70 C18 80, 20 90, 24 95 C27 97, 33 97, 36 95 C40 90, 42 80, 42 70 C42 60, 40 56, 40 48 C40 42, 40 35, 40 25 C40 15, 36 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Rectangle</span>
+                </div>
+                <div class="bs-ref-item" data-shape="inverted_triangle">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C20 5, 12 15, 10 25 C8 35, 12 40, 14 48 C16 56, 18 58, 20 65 C22 74, 24 82, 26 92 C28 96, 32 96, 34 92 C36 82, 38 74, 40 65 C42 58, 44 56, 46 48 C48 40, 52 35, 50 25 C48 15, 40 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Inv. Triangle</span>
+                </div>
+                <div class="bs-ref-item" data-shape="triangle">
+                    <div class="bs-ref-silhouette">
+                        <svg viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 5 C24 5, 22 15, 22 25 C22 35, 24 40, 22 48 C20 56, 16 58, 12 65 C8 74, 6 82, 10 92 C14 96, 22 98, 30 98 C38 98, 46 96, 50 92 C54 82, 52 74, 48 65 C44 58, 40 56, 38 48 C36 40, 38 35, 38 25 C38 15, 36 5, 30 5Z" fill="currentColor" opacity="0.85"/>
+                        </svg>
+                    </div>
+                    <span class="bs-ref-name">Triangle</span>
+                </div>
+            </div>
+        </div>
+
+        {# ── LIVE BODY PREVIEW ── #}
+        <div class="bs-card bs-preview-card">
+            <h3>{{ icon('user', 'icon-sm') }} Your Body Preview</h3>
+            <div class="bs-preview">
+                <div class="bs-preview-figure" id="previewFigure">
+                    <svg id="previewSvg" viewBox="0 0 120 220" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="var(--lime)" stop-opacity="0.9"/>
+                                <stop offset="100%" stop-color="var(--lime-dim)" stop-opacity="0.7"/>
+                            </linearGradient>
+                        </defs>
+                        <g id="previewBody" fill="url(#bodyGrad)">
+                            <ellipse id="pHead" cx="60" cy="22" rx="14" ry="16"/>
+                            <path id="pTorso" d="M45 40 Q45 55, 45 70 L45 140 Q45 155, 60 160 Q75 155, 75 140 L75 70 Q75 55, 75 40 Z"/>
+                        </g>
+                        <text id="pShoulderLabel" x="60" y="38" text-anchor="middle" fill="var(--g3)" font-size="8" font-family="var(--font-ui)">shoulders</text>
+                        <text id="pWaistLabel" x="60" y="108" text-anchor="middle" fill="var(--g3)" font-size="8" font-family="var(--font-ui)">waist</text>
+                        <text id="pHipLabel" x="60" y="155" text-anchor="middle" fill="var(--g3)" font-size="8" font-family="var(--font-ui)">hips</text>
+                    </svg>
+                </div>
+                <div class="bs-preview-shape" id="previewShapeName">Enter measurements to preview</div>
+            </div>
+        </div>
+
+        {# ── FORM ── #}
+        <div class="bs-card">
             <form method="POST" action="/body-shape" id="bodyShapeForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                {# Gender #}
-                <div class="bs-field">
-                    <label class="bs-label">Gender *</label>
+                {# Section: Gender #}
+                <div class="bs-section">
+                    <div class="bs-section-label">{{ icon('user', 'icon-xs') }} Gender</div>
                     <div class="bs-radio-row">
                         <label class="bs-radio-card {% if request.form.get('gender') == 'male' %}selected{% endif %}">
                             <input type="radio" name="gender" value="male" {% if request.form.get('gender') == 'male' %}checked{% endif %} required>
-                            {{ icon('user', 'icon-sm') }} Male
+                            <svg class="bs-gender-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="14" r="5"/><path d="M14 10l6-6m0 0h-4m4 0v4"/></svg>
+                            Male
                         </label>
                         <label class="bs-radio-card {% if request.form.get('gender') == 'female' %}selected{% endif %}">
                             <input type="radio" name="gender" value="female" {% if request.form.get('gender') == 'female' %}checked{% endif %}>
-                            {{ icon('user', 'icon-sm') }} Female
+                            <svg class="bs-gender-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M12 13v8m-4-4h8"/></svg>
+                            Female
                         </label>
                     </div>
                 </div>
 
-                {# Age + Weight + Height #}
-                <div class="bs-field-row">
-                    <div class="bs-field">
-                        <label class="bs-label" for="age">Age</label>
-                        <input type="number" id="age" name="age" min="10" max="120" class="text-input"
-                            placeholder="e.g. 25" value="{{ request.form.get('age', '') }}">
-                    </div>
-                    <div class="bs-field">
-                        <label class="bs-label" for="weight_kg">Weight (kg) *</label>
-                        <input type="number" step="0.1" min="1" id="weight_kg" name="weight_kg" class="text-input"
-                            placeholder="e.g. 75" required value="{{ request.form.get('weight_kg', '') }}">
-                    </div>
-                    <div class="bs-field">
-                        <label class="bs-label" for="height_cm">Height (cm) *</label>
-                        <input type="number" step="0.1" min="50" id="height_cm" name="height_cm" class="text-input"
-                            placeholder="e.g. 175" required value="{{ request.form.get('height_cm', '') }}">
+                <div class="bs-section-line"></div>
+
+                {# Section: Basic Info #}
+                <div class="bs-section">
+                    <div class="bs-section-label">{{ icon('activity', 'icon-xs') }} Basic Info</div>
+                    <div class="bs-field-row">
+                        <div class="bs-field">
+                            <label class="bs-label" for="age">Age</label>
+                            <input type="number" id="age" name="age" min="10" max="120" class="text-input"
+                                placeholder="e.g. 25" value="{{ request.form.get('age', '') }}">
+                        </div>
+                        <div class="bs-field">
+                            <label class="bs-label" for="weight_kg">Weight (kg) *</label>
+                            <input type="number" step="0.1" min="1" id="weight_kg" name="weight_kg" class="text-input"
+                                placeholder="e.g. 75" required value="{{ request.form.get('weight_kg', '') }}">
+                        </div>
+                        <div class="bs-field">
+                            <label class="bs-label" for="height_cm">Height (cm) *</label>
+                            <input type="number" step="0.1" min="50" id="height_cm" name="height_cm" class="text-input"
+                                placeholder="e.g. 175" required value="{{ request.form.get('height_cm', '') }}">
+                        </div>
                     </div>
                 </div>
 
-                <div class="bs-divider"></div>
+                <div class="bs-section-line"></div>
 
-                {# Circumference measurements #}
-                <div class="bs-field-row">
-                    <div class="bs-field">
-                        <label class="bs-label" for="waist_cm">Waist (cm) *</label>
-                        <input type="number" step="0.1" min="20" id="waist_cm" name="waist_cm" class="text-input"
-                            placeholder="e.g. 80" required value="{{ request.form.get('waist_cm', '') }}">
-                        <span class="bs-hint">Measure at the narrowest point</span>
+                {# Section: Circumference #}
+                <div class="bs-section">
+                    <div class="bs-section-label">{{ icon('arrow-up-down', 'icon-xs') }} Circumference Measurements</div>
+                    <div class="bs-field-row">
+                        <div class="bs-field">
+                            <label class="bs-label" for="waist_cm">Waist (cm) *</label>
+                            <input type="number" step="0.1" min="20" id="waist_cm" name="waist_cm" class="text-input"
+                                placeholder="e.g. 80" required value="{{ request.form.get('waist_cm', '') }}">
+                            <span class="bs-hint">Narrowest point of torso</span>
+                        </div>
+                        <div class="bs-field">
+                            <label class="bs-label" for="hip_cm">Hip (cm)</label>
+                            <input type="number" step="0.1" min="20" id="hip_cm" name="hip_cm" class="text-input"
+                                placeholder="e.g. 100" value="{{ request.form.get('hip_cm', '') }}">
+                            <span class="bs-hint">Widest point of hips</span>
+                        </div>
                     </div>
-                    <div class="bs-field">
-                        <label class="bs-label" for="hip_cm">Hip (cm)</label>
-                        <input type="number" step="0.1" min="20" id="hip_cm" name="hip_cm" class="text-input"
-                            placeholder="e.g. 100" value="{{ request.form.get('hip_cm', '') }}">
-                        <span class="bs-hint">Measure at the widest point</span>
-                    </div>
-                </div>
-
-                <div class="bs-field-row">
-                    <div class="bs-field">
-                        <label class="bs-label" for="neck_cm">Neck (cm)</label>
-                        <input type="number" step="0.1" min="15" id="neck_cm" name="neck_cm" class="text-input"
-                            placeholder="e.g. 38" value="{{ request.form.get('neck_cm', '') }}">
-                        <span class="bs-hint">Measure around the narrowest point</span>
-                    </div>
-                    <div class="bs-field">
-                        <label class="bs-label" for="shoulder_cm">Shoulder (cm)</label>
-                        <input type="number" step="0.1" min="20" id="shoulder_cm" name="shoulder_cm" class="text-input"
-                            placeholder="e.g. 110" value="{{ request.form.get('shoulder_cm', '') }}">
-                        <span class="bs-hint">Measure around the widest point across shoulders</span>
+                    <div class="bs-field-row">
+                        <div class="bs-field">
+                            <label class="bs-label" for="neck_cm">Neck (cm)</label>
+                            <input type="number" step="0.1" min="15" id="neck_cm" name="neck_cm" class="text-input"
+                                placeholder="e.g. 38" value="{{ request.form.get('neck_cm', '') }}">
+                            <span class="bs-hint">Narrowest point of neck</span>
+                        </div>
+                        <div class="bs-field">
+                            <label class="bs-label" for="shoulder_cm">Shoulder (cm)</label>
+                            <input type="number" step="0.1" min="20" id="shoulder_cm" name="shoulder_cm" class="text-input"
+                                placeholder="e.g. 110" value="{{ request.form.get('shoulder_cm', '') }}">
+                            <span class="bs-hint">Widest across shoulders</span>
+                        </div>
                     </div>
                 </div>
 
@@ -115,14 +205,22 @@
 
             {# Body Shape Card #}
             <div class="bs-card bs-shape-card bs-shape-{{ result.shape_key }}">
-                <div class="bs-shape-icon">
-                    {% if result.shape_key == 'hourglass' %}⏳
-                    {% elif result.shape_key == 'pear' %}🍐
-                    {% elif result.shape_key == 'apple' %}🍎
-                    {% elif result.shape_key == 'rectangle' %}▬
-                    {% elif result.shape_key == 'inverted_triangle' %}🔻
-                    {% elif result.shape_key == 'triangle' %}🔺
-                    {% else %}{{ icon('user', 'icon-lg') }}{% endif %}
+                <div class="bs-shape-avatar">
+                    <svg viewBox="0 0 120 200" xmlns="http://www.w3.org/2000/svg" class="bs-result-silhouette bs-sil-{{ result.shape_key }}">
+                        {% if result.shape_key == 'hourglass' %}
+                            <path d="M60 8 C45 8, 35 25, 35 40 C35 55, 48 62, 44 78 C40 94, 30 98, 34 125 C38 152, 48 175, 60 185 C72 175, 82 152, 86 125 C90 98, 80 94, 76 78 C72 62, 85 55, 85 40 C85 25, 75 8, 60 8Z"/>
+                        {% elif result.shape_key == 'pear' %}
+                            <path d="M60 8 C48 8, 42 25, 42 40 C42 55, 52 60, 50 72 C48 84, 40 92, 30 110 C20 128, 18 150, 28 172 C38 188, 50 195, 60 196 C70 195, 82 188, 92 172 C102 150, 100 128, 90 110 C80 92, 72 84, 70 72 C68 60, 78 55, 78 40 C78 25, 72 8, 60 8Z"/>
+                        {% elif result.shape_key == 'apple' %}
+                            <path d="M60 8 C48 8, 42 25, 42 40 C42 52, 44 58, 36 78 C28 98, 24 118, 32 145 C40 172, 50 185, 60 188 C70 185, 80 172, 88 145 C96 118, 92 98, 84 78 C76 58, 78 52, 78 40 C78 25, 72 8, 60 8Z"/>
+                        {% elif result.shape_key == 'rectangle' %}
+                            <path d="M60 8 C50 8, 45 25, 45 40 C45 55, 45 65, 44 78 C43 94, 42 105, 42 125 C42 145, 44 165, 48 180 C52 188, 56 192, 60 193 C64 192, 68 188, 72 180 C76 165, 78 145, 78 125 C78 105, 77 94, 76 78 C75 65, 75 55, 75 40 C75 25, 70 8, 60 8Z"/>
+                        {% elif result.shape_key == 'inverted_triangle' %}
+                            <path d="M60 8 C45 8, 28 25, 25 40 C22 55, 32 62, 36 78 C40 94, 38 98, 40 125 C42 152, 48 175, 54 188 C57 192, 63 192, 66 188 C72 175, 78 152, 80 125 C82 98, 80 94, 84 78 C88 62, 98 55, 95 40 C92 25, 75 8, 60 8Z"/>
+                        {% else %}
+                            <path d="M60 8 C48 8, 42 25, 42 40 C42 55, 44 62, 40 78 C36 94, 32 98, 28 125 C24 152, 20 175, 30 188 C40 195, 52 198, 60 198 C68 198, 80 195, 90 188 C100 175, 96 152, 92 125 C88 98, 84 94, 80 78 C76 62, 78 55, 78 40 C78 25, 72 8, 60 8Z"/>
+                        {% endif %}
+                    </svg>
                 </div>
                 <h3 class="bs-shape-name">{{ result.shape_name }}</h3>
                 <p class="bs-shape-desc">{{ result.shape_description }}</p>
@@ -200,7 +298,6 @@
             </div>
             {% endif %}
 
-            {# Generate Plan Button #}
             <button class="btn btn-primary btn-lg btn-full" onclick="generatePlan()">
                 {{ icon('zap', 'icon-sm') }} Generate My Exercise Plan
             </button>
@@ -238,8 +335,83 @@ document.querySelectorAll('.bs-radio-card').forEach(card => {
     card.addEventListener('click', () => {
         card.closest('.bs-radio-row').querySelectorAll('.bs-radio-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
+        updatePreview();
     });
 });
+
+// ── Live body preview ──
+function updatePreview() {
+    const gender = document.querySelector('input[name="gender"]:checked');
+    const waist = parseFloat(document.getElementById('waist_cm')?.value) || 0;
+    const hip = parseFloat(document.getElementById('hip_cm')?.value) || 0;
+    const shoulder = parseFloat(document.getElementById('shoulder_cm')?.value) || 0;
+    const height = parseFloat(document.getElementById('height_cm')?.value) || 0;
+
+    const torso = document.getElementById('pTorso');
+    const shapeLabel = document.getElementById('previewShapeName');
+    if (!torso) return;
+
+    // Default proportional shape
+    const sW = shoulder || 50;
+    const wW = waist || 45;
+    const hW = hip || 50;
+
+    // Scale to fit SVG (max ~70px wide)
+    const maxW = Math.max(sW, wW, hW, 1);
+    const scale = 70 / maxW;
+    const sw = sW * scale;
+    const ww = wW * scale;
+    const hw = hW * scale;
+
+    const cx = 60;
+    const top = 40;
+    const mid = 100;
+    const bot = 155;
+
+    const d = `M${cx - sw/2} ${top}
+               Q${cx - ww/2 - 3} ${(top+mid)/2}, ${cx - ww/2} ${mid}
+               L${cx - hw/2} ${bot - 15}
+               Q${cx} ${bot + 5}, ${cx + hw/2} ${bot - 15}
+               L${cx + ww/2} ${mid}
+               Q${cx + ww/2 + 3} ${(top+mid)/2}, ${cx + sw/2} ${top}
+               Q${cx} ${top - 10}, ${cx - sw/2} ${top}Z`;
+
+    torso.setAttribute('d', d);
+
+    // Predict shape name
+    if (waist && hip && shoulder) {
+        const whr = waist / hip;
+        const shHr = shoulder / hip;
+        let shape = '';
+        if (gender?.value === 'male') {
+            if (shHr > 1.15) shape = 'Inverted Triangle';
+            else if (whr < 0.85) shape = 'Triangle (Pear)';
+            else if (waist >= hip) shape = 'Apple';
+            else if (whr < 0.9 && Math.abs(shHr - 1) < 0.1) shape = 'Hourglass';
+            else shape = 'Rectangle';
+        } else {
+            if (whr < 0.75 && Math.abs(shHr - 1) < 0.1) shape = 'Hourglass';
+            else if (hip > shoulder * 1.05 && whr < 0.8) shape = 'Pear';
+            else if (waist >= hip * 0.85 || shHr > 1.1) shape = 'Apple';
+            else if (shHr > 1.1) shape = 'Inverted Triangle';
+            else shape = 'Rectangle';
+        }
+        shapeLabel.textContent = 'Looks like: ' + shape;
+        shapeLabel.style.color = 'var(--lime)';
+    } else {
+        shapeLabel.textContent = 'Fill waist, hip & shoulders to preview';
+        shapeLabel.style.color = 'var(--g3)';
+    }
+}
+
+// Attach live update listeners
+['waist_cm', 'hip_cm', 'shoulder_cm', 'height_cm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+});
+
+// Initialize preview on load
+updatePreview();
 
 // ── Auto-show results tab if result exists ──
 {% if result %}
