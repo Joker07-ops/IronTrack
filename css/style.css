@@ -1963,32 +1963,6 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .bs-card-header h3 { font-family: var(--font-display); font-size: var(--text-h4); color: var(--white); display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
 .bs-card-header p { font-size: var(--text-sm); color: var(--g3); }
 
-/* ── Reference Guide ── */
-.bs-ref-card { padding: var(--space-6); }
-.bs-ref-header { margin-bottom: var(--space-5); }
-.bs-ref-header h3 { font-family: var(--font-display); font-size: var(--text-h5); color: var(--white); display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
-.bs-ref-header p { font-size: var(--text-xs); color: var(--g3); }
-.bs-ref-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-3); }
-.bs-ref-item {
-    display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
-    padding: var(--space-3) var(--space-2); border-radius: var(--r-md);
-    border: 1px solid transparent; transition: all var(--t) var(--ease); cursor: default;
-}
-.bs-ref-item:hover { border-color: var(--line2); background: var(--card2); }
-.bs-ref-silhouette { width: 36px; height: 56px; color: var(--g2); transition: color var(--t) var(--ease); }
-.bs-ref-item:hover .bs-ref-silhouette { color: var(--lime); }
-.bs-ref-silhouette svg { width: 100%; height: 100%; }
-.bs-ref-name { font-family: var(--font-ui); font-size: 0.65rem; color: var(--g3); text-align: center; letter-spacing: var(--ls-wide); line-height: 1.2; }
-
-/* ── Live Body Preview ── */
-.bs-preview-card { padding: var(--space-6); text-align: center; }
-.bs-preview-card h3 { font-family: var(--font-display); font-size: var(--text-h5); color: var(--white); display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin-bottom: var(--space-4); }
-.bs-preview { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
-.bs-preview-figure { width: 120px; height: 220px; }
-.bs-preview-figure svg { width: 100%; height: 100%; }
-#previewBody { transition: d 0.3s var(--ease); }
-.bs-preview-shape { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--g3); }
-
 /* ── Section Dividers ── */
 .bs-section { margin-bottom: var(--space-2); }
 .bs-section-label {
@@ -2090,7 +2064,6 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .bs-empty p { font-size: var(--text-body); }
 
 @media (max-width: 768px) {
-    .bs-ref-grid { grid-template-columns: repeat(3, 1fr); }
     .bs-field-row { flex-direction: column; gap: 0; }
     .bs-radio-row { flex-direction: column; }
     .bs-stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2098,7 +2071,6 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
     .bs-shape-card { padding: var(--space-8); }
 }
 @media (max-width: 480px) {
-    .bs-ref-grid { grid-template-columns: repeat(3, 1fr); }
     .bs-stats-grid { grid-template-columns: 1fr 1fr; }
     .bs-tab { padding: 0.5rem 0.8rem; font-size: var(--text-xs); }
 }
