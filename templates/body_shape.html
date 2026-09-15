@@ -205,22 +205,14 @@
 
             {# Body Shape Card #}
             <div class="bs-card bs-shape-card bs-shape-{{ result.shape_key }}">
-                <div class="bs-shape-avatar">
-                    <svg viewBox="0 0 120 200" xmlns="http://www.w3.org/2000/svg" class="bs-result-silhouette bs-sil-{{ result.shape_key }}">
-                        {% if result.shape_key == 'hourglass' %}
-                            <path d="M60 8 C45 8, 35 25, 35 40 C35 55, 48 62, 44 78 C40 94, 30 98, 34 125 C38 152, 48 175, 60 185 C72 175, 82 152, 86 125 C90 98, 80 94, 76 78 C72 62, 85 55, 85 40 C85 25, 75 8, 60 8Z"/>
-                        {% elif result.shape_key == 'pear' %}
-                            <path d="M60 8 C48 8, 42 25, 42 40 C42 55, 52 60, 50 72 C48 84, 40 92, 30 110 C20 128, 18 150, 28 172 C38 188, 50 195, 60 196 C70 195, 82 188, 92 172 C102 150, 100 128, 90 110 C80 92, 72 84, 70 72 C68 60, 78 55, 78 40 C78 25, 72 8, 60 8Z"/>
-                        {% elif result.shape_key == 'apple' %}
-                            <path d="M60 8 C48 8, 42 25, 42 40 C42 52, 44 58, 36 78 C28 98, 24 118, 32 145 C40 172, 50 185, 60 188 C70 185, 80 172, 88 145 C96 118, 92 98, 84 78 C76 58, 78 52, 78 40 C78 25, 72 8, 60 8Z"/>
-                        {% elif result.shape_key == 'rectangle' %}
-                            <path d="M60 8 C50 8, 45 25, 45 40 C45 55, 45 65, 44 78 C43 94, 42 105, 42 125 C42 145, 44 165, 48 180 C52 188, 56 192, 60 193 C64 192, 68 188, 72 180 C76 165, 78 145, 78 125 C78 105, 77 94, 76 78 C75 65, 75 55, 75 40 C75 25, 70 8, 60 8Z"/>
-                        {% elif result.shape_key == 'inverted_triangle' %}
-                            <path d="M60 8 C45 8, 28 25, 25 40 C22 55, 32 62, 36 78 C40 94, 38 98, 40 125 C42 152, 48 175, 54 188 C57 192, 63 192, 66 188 C72 175, 78 152, 80 125 C82 98, 80 94, 84 78 C88 62, 98 55, 95 40 C92 25, 75 8, 60 8Z"/>
-                        {% else %}
-                            <path d="M60 8 C48 8, 42 25, 42 40 C42 55, 44 62, 40 78 C36 94, 32 98, 28 125 C24 152, 20 175, 30 188 C40 195, 52 198, 60 198 C68 198, 80 195, 90 188 C100 175, 96 152, 92 125 C88 98, 84 94, 80 78 C76 62, 78 55, 78 40 C78 25, 72 8, 60 8Z"/>
-                        {% endif %}
-                    </svg>
+                <div class="bs-shape-icon">
+                    {% if result.shape_key == 'hourglass' %}⏳
+                    {% elif result.shape_key == 'pear' %}🍐
+                    {% elif result.shape_key == 'apple' %}🍎
+                    {% elif result.shape_key == 'rectangle' %}▬
+                    {% elif result.shape_key == 'inverted_triangle' %}🔻
+                    {% elif result.shape_key == 'triangle' %}🔺
+                    {% else %}{{ icon('user', 'icon-lg') }}{% endif %}
                 </div>
                 <h3 class="bs-shape-name">{{ result.shape_name }}</h3>
                 <p class="bs-shape-desc">{{ result.shape_description }}</p>
