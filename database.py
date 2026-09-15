@@ -435,6 +435,27 @@ def init_db():
         )
     """)
 
+    # Body measurements — per user (body shape analysis)
+    c.execute(f"""
+        CREATE TABLE IF NOT EXISTS body_measurements (
+            {pk},
+            user_id INTEGER NOT NULL,
+            gender TEXT NOT NULL,
+            age INTEGER,
+            weight_kg REAL NOT NULL,
+            height_cm REAL NOT NULL,
+            neck_cm REAL,
+            shoulder_cm REAL,
+            waist_cm REAL NOT NULL,
+            hip_cm REAL,
+            body_shape TEXT,
+            body_fat_pct REAL,
+            whr REAL,
+            bmi REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -527,3 +548,49 @@ def init_feedback_table():
                 pass
     conn.commit()
     conn.close()
+
+
+def save_body_measurement(user_id, gender, age, weight_kg, height_cm,
+                          neck_cm, shoulder_cm, waist_cm, hip_cm,
+                          body_shape, body_fat_pct, whr, bmi):
+    """Save a body measurement record and return its ID."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        """INSERT INTO body_measurements
+           (user_id, gender, age, weight_kg, height_cm, neck_cm, shoulder_cm,
+            waist_cm, hip_cm, body_shape, body_fat_pct, whr, bmi)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (user_id, gender, age, weight_kg, height_cm, neck_cm, shoulder_cm,
+         waist_cm, hip_cm, body_shape, body_fat_pct, whr, bmi)
+    )
+    row_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return row_id
+
+
+def get_latest_body_measurement(user_id):
+    """Get the most recent body measurement for a user."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM body_measurements WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+        (user_id,)
+    )
+    row = c.fetchone()
+    conn.close()
+    return row
+
+
+def get_body_measurement_history(user_id, limit=10):
+    """Get recent body measurement history."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM body_measurements WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (user_id, limit)
+    )
+    rows = c.fetchall()
+    conn.close()
+    return rows

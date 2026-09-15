@@ -195,7 +195,7 @@
     <ul class="nav-links">
         <li><a href="/" class="{{ 'active' if request.path == '/' }}" {% if request.path == '/' %}aria-current="page"{% endif %}>Home</a></li>
         <li><a href="/workout" class="{{ 'active' if request.path == '/workout' }}" {% if request.path == '/workout' %}aria-current="page"{% endif %}>Workout</a></li>
-        <li><a href="/bmi" class="{{ 'active' if request.path == '/bmi' }}" {% if request.path == '/bmi' %}aria-current="page"{% endif %}>Health</a></li>
+        <li><a href="/body-shape" class="{{ 'active' if request.path in ('/bmi', '/body-shape') }}" {% if request.path in ('/bmi', '/body-shape') %}aria-current="page"{% endif %}>Health</a></li>
         <li><a href="/summary" class="{{ 'active' if request.path == '/summary' }}" {% if request.path == '/summary' %}aria-current="page"{% endif %}>Summary</a></li>
         <li><a href="/history" class="{{ 'active' if request.path == '/history' }}" {% if request.path == '/history' %}aria-current="page"{% endif %}>History</a></li>
         <li><a href="/about" class="{{ 'active' if request.path == '/about' }}" {% if request.path == '/about' %}aria-current="page"{% endif %}>About</a></li>
@@ -266,7 +266,7 @@
         {% if current_user.is_authenticated %}
         <li><a href="/profile" class="{{ 'active' if request.path == '/profile' }}" {% if request.path == '/profile' %}aria-current="page"{% endif %}>{{ icon('user','icon-sm') }} Profile</a></li>
         {% endif %}
-        <li><a href="/bmi" class="{{ 'active' if request.path == '/bmi' }}" {% if request.path == '/bmi' %}aria-current="page"{% endif %}>{{ icon('scale','icon-sm') }} Health Calculator</a></li>
+        <li><a href="/body-shape" class="{{ 'active' if request.path in ('/bmi', '/body-shape') }}" {% if request.path in ('/bmi', '/body-shape') %}aria-current="page"{% endif %}>{{ icon('scale','icon-sm') }} Health Calculator</a></li>
         <li><a href="/summary" class="{{ 'active' if request.path == '/summary' }}" {% if request.path == '/summary' %}aria-current="page"{% endif %}>{{ icon('bar-chart-2','icon-sm') }} Summary</a></li>
         <li><a href="/history" class="{{ 'active' if request.path == '/history' }}" {% if request.path == '/history' %}aria-current="page"{% endif %}>{{ icon('history','icon-sm') }} History</a></li>
         <li><a href="/about" class="{{ 'active' if request.path == '/about' }}" {% if request.path == '/about' %}aria-current="page"{% endif %}>{{ icon('compass','icon-sm') }} About</a></li>
@@ -315,7 +315,7 @@
             <a href="/">Home</a>
             <a href="/workout">Workout</a>
             <a href="/templates">Templates</a>
-            <a href="/bmi">Health Calculator</a>
+            <a href="/body-shape">Health Calculator</a>
             <a href="/assistant">AI Assistant</a>
             <a href="/summary">Summary</a>
             <a href="/history">History</a>
@@ -567,7 +567,7 @@ document.addEventListener('keydown', function(e) {
         switch (e.key) {
             case '1': case 'h': window.location.href = '/'; break;
             case '2': case 'w': window.location.href = '/workout'; break;
-            case '3': case 'b': window.location.href = '/bmi'; break;
+            case '3': case 'b': window.location.href = '/body-shape'; break;
             case '4': case 's': window.location.href = '/summary'; break;
             case '5': case 'r': window.location.href = '/history'; break;
             case 'p': window.location.href = '/profile'; break;
@@ -583,7 +583,7 @@ function showShortcutsModal() {
         '<div class="shortcut-grid">' +
         '<span class="shortcut-key">Alt+H</span><span>Home</span>' +
         '<span class="shortcut-key">Alt+W</span><span>Workout</span>' +
-        '<span class="shortcut-key">Alt+B</span><span>Health (BMI)</span>' +
+        '<span class="shortcut-key">Alt+B</span><span>Health (Body Shape)</span>' +
         '<span class="shortcut-key">Alt+S</span><span>Summary</span>' +
         '<span class="shortcut-key">Alt+R</span><span>History</span>' +
         '<span class="shortcut-key">Alt+P</span><span>Profile</span>' +

@@ -1,0 +1,324 @@
+{% from '_icons.html' import icon %}
+{% extends "base.html" %}
+{% block title %}IronTrack | Body Shape Analyzer & Workout Planner{% endblock %}
+{% block seo_description %}Analyze your body shape and get a personalized exercise plan tailored to your measurements, proportions and fitness goals with IronTrack.{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-center">
+    <h1>BODY SHAPE ANALYZER</h1>
+    <p>Enter your measurements to discover your body type and get a personalized exercise plan.</p>
+</div>
+
+<div class="bs-container">
+
+    {# ── TABS ── #}
+    <div class="bs-tabs">
+        <button class="bs-tab active" onclick="showBsTab('form')" id="tab-form">
+            {{ icon('activity', 'icon-sm') }} Enter Measurements
+        </button>
+        <button class="bs-tab" onclick="showBsTab('results')" id="tab-results" {% if not result %}disabled{% endif %}>
+            {{ icon('target', 'icon-sm') }} Your Results
+        </button>
+        <button class="bs-tab" onclick="showBsTab('plan')" id="tab-plan" {% if not result %}disabled{% endif %}>
+            {{ icon('zap', 'icon-sm') }} Exercise Plan
+        </button>
+    </div>
+
+    {# ── TAB 1: MEASUREMENT FORM ── #}
+    <div class="bs-tab-content" id="bs-form">
+        <div class="bs-card">
+            <div class="bs-card-header">
+                <h3>{{ icon('user', 'icon-sm') }} Body Measurements</h3>
+                <p>All fields marked with * are required. Optional measurements improve accuracy.</p>
+            </div>
+            <form method="POST" action="/body-shape" id="bodyShapeForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                {# Gender #}
+                <div class="bs-field">
+                    <label class="bs-label">Gender *</label>
+                    <div class="bs-radio-row">
+                        <label class="bs-radio-card {% if request.form.get('gender') == 'male' %}selected{% endif %}">
+                            <input type="radio" name="gender" value="male" {% if request.form.get('gender') == 'male' %}checked{% endif %} required>
+                            {{ icon('user', 'icon-sm') }} Male
+                        </label>
+                        <label class="bs-radio-card {% if request.form.get('gender') == 'female' %}selected{% endif %}">
+                            <input type="radio" name="gender" value="female" {% if request.form.get('gender') == 'female' %}checked{% endif %}>
+                            {{ icon('user', 'icon-sm') }} Female
+                        </label>
+                    </div>
+                </div>
+
+                {# Age + Weight + Height #}
+                <div class="bs-field-row">
+                    <div class="bs-field">
+                        <label class="bs-label" for="age">Age</label>
+                        <input type="number" id="age" name="age" min="10" max="120" class="text-input"
+                            placeholder="e.g. 25" value="{{ request.form.get('age', '') }}">
+                    </div>
+                    <div class="bs-field">
+                        <label class="bs-label" for="weight_kg">Weight (kg) *</label>
+                        <input type="number" step="0.1" min="1" id="weight_kg" name="weight_kg" class="text-input"
+                            placeholder="e.g. 75" required value="{{ request.form.get('weight_kg', '') }}">
+                    </div>
+                    <div class="bs-field">
+                        <label class="bs-label" for="height_cm">Height (cm) *</label>
+                        <input type="number" step="0.1" min="50" id="height_cm" name="height_cm" class="text-input"
+                            placeholder="e.g. 175" required value="{{ request.form.get('height_cm', '') }}">
+                    </div>
+                </div>
+
+                <div class="bs-divider"></div>
+
+                {# Circumference measurements #}
+                <div class="bs-field-row">
+                    <div class="bs-field">
+                        <label class="bs-label" for="waist_cm">Waist (cm) *</label>
+                        <input type="number" step="0.1" min="20" id="waist_cm" name="waist_cm" class="text-input"
+                            placeholder="e.g. 80" required value="{{ request.form.get('waist_cm', '') }}">
+                        <span class="bs-hint">Measure at the narrowest point</span>
+                    </div>
+                    <div class="bs-field">
+                        <label class="bs-label" for="hip_cm">Hip (cm)</label>
+                        <input type="number" step="0.1" min="20" id="hip_cm" name="hip_cm" class="text-input"
+                            placeholder="e.g. 100" value="{{ request.form.get('hip_cm', '') }}">
+                        <span class="bs-hint">Measure at the widest point</span>
+                    </div>
+                </div>
+
+                <div class="bs-field-row">
+                    <div class="bs-field">
+                        <label class="bs-label" for="neck_cm">Neck (cm)</label>
+                        <input type="number" step="0.1" min="15" id="neck_cm" name="neck_cm" class="text-input"
+                            placeholder="e.g. 38" value="{{ request.form.get('neck_cm', '') }}">
+                        <span class="bs-hint">Measure around the narrowest point</span>
+                    </div>
+                    <div class="bs-field">
+                        <label class="bs-label" for="shoulder_cm">Shoulder (cm)</label>
+                        <input type="number" step="0.1" min="20" id="shoulder_cm" name="shoulder_cm" class="text-input"
+                            placeholder="e.g. 110" value="{{ request.form.get('shoulder_cm', '') }}">
+                        <span class="bs-hint">Measure around the widest point across shoulders</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-full">
+                    {{ icon('zap', 'icon-sm') }} Analyze My Body Shape
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# ── TAB 2: RESULTS ── #}
+    <div class="bs-tab-content" id="bs-results" style="display:none">
+        {% if result %}
+        <div class="bs-results-grid">
+
+            {# Body Shape Card #}
+            <div class="bs-card bs-shape-card bs-shape-{{ result.shape_key }}">
+                <div class="bs-shape-icon">
+                    {% if result.shape_key == 'hourglass' %}⏳
+                    {% elif result.shape_key == 'pear' %}🍐
+                    {% elif result.shape_key == 'apple' %}🍎
+                    {% elif result.shape_key == 'rectangle' %}▬
+                    {% elif result.shape_key == 'inverted_triangle' %}🔻
+                    {% elif result.shape_key == 'triangle' %}🔺
+                    {% else %}{{ icon('user', 'icon-lg') }}{% endif %}
+                </div>
+                <h3 class="bs-shape-name">{{ result.shape_name }}</h3>
+                <p class="bs-shape-desc">{{ result.shape_description }}</p>
+            </div>
+
+            {# Stats Grid #}
+            <div class="bs-stats-grid">
+                <div class="bs-stat-card">
+                    <div class="bs-stat-value">{{ result.bmi }}</div>
+                    <div class="bs-stat-label">BMI</div>
+                    <div class="bs-stat-tag bs-tag-{{ result.bmi_category | lower }}">{{ result.bmi_category }}</div>
+                </div>
+                {% if result.body_fat is not none %}
+                <div class="bs-stat-card">
+                    <div class="bs-stat-value">{{ result.body_fat }}%</div>
+                    <div class="bs-stat-label">Body Fat</div>
+                    <div class="bs-stat-tag">
+                        {% if result.gender == 'male' %}
+                            {% if result.body_fat < 14 %}Athletic
+                            {% elif result.body_fat < 18 %}Fit
+                            {% elif result.body_fat < 25 %}Average
+                            {% else %}Above Average{% endif %}
+                        {% else %}
+                            {% if result.body_fat < 21 %}Athletic
+                            {% elif result.body_fat < 25 %}Fit
+                            {% elif result.body_fat < 32 %}Average
+                            {% else %}Above Average{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if result.whr is not none %}
+                <div class="bs-stat-card">
+                    <div class="bs-stat-value">{{ result.whr }}</div>
+                    <div class="bs-stat-label">WHR</div>
+                    <div class="bs-stat-tag">
+                        {% if result.gender == 'male' %}
+                            {% if result.whr < 0.9 %}Healthy
+                            {% else %}Elevated{% endif %}
+                        {% else %}
+                            {% if result.whr < 0.85 %}Healthy
+                            {% else %}Elevated{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="bs-stat-card">
+                    <div class="bs-stat-value">{{ result.weight_kg }}</div>
+                    <div class="bs-stat-label">Weight (kg)</div>
+                </div>
+                <div class="bs-stat-card">
+                    <div class="bs-stat-value">{{ result.height_cm }}</div>
+                    <div class="bs-stat-label">Height (cm)</div>
+                </div>
+            </div>
+
+            {# Tips Card #}
+            {% if result.tips %}
+            <div class="bs-card bs-tips-card">
+                <h3>{{ icon('lightbulb', 'icon-sm') }} Training Tips for {{ result.shape_name }}</h3>
+                <div class="bs-tips-grid">
+                    <div class="bs-tip">
+                        <span class="bs-tip-label">Focus On</span>
+                        <span class="bs-tip-text">{{ result.tips.focus }}</span>
+                    </div>
+                    <div class="bs-tip">
+                        <span class="bs-tip-label">Avoid</span>
+                        <span class="bs-tip-text">{{ result.tips.avoid }}</span>
+                    </div>
+                    <div class="bs-tip">
+                        <span class="bs-tip-label">Ideal Exercises</span>
+                        <span class="bs-tip-text">{{ result.tips.ideal }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {# Generate Plan Button #}
+            <button class="btn btn-primary btn-lg btn-full" onclick="generatePlan()">
+                {{ icon('zap', 'icon-sm') }} Generate My Exercise Plan
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── TAB 3: EXERCISE PLAN ── #}
+    <div class="bs-tab-content" id="bs-plan" style="display:none">
+        <div id="plan-loading" class="bs-loading" style="display:none">
+            <div class="skeleton" style="height:200px;border-radius:var(--r-lg)"></div>
+            <p>Generating your personalized plan...</p>
+        </div>
+        <div id="plan-error" class="bs-error" style="display:none"></div>
+        <div id="plan-content"></div>
+        <div id="plan-placeholder" class="bs-card bs-empty">
+            {{ icon('zap', 'icon-lg') }}
+            <p>Click <strong>"Analyze My Body Shape"</strong> first, then generate your plan from the Results tab.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Tab switching ──
+function showBsTab(tab) {
+    document.querySelectorAll('.bs-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.bs-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('bs-' + tab).style.display = '';
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ── Radio card selection ──
+document.querySelectorAll('.bs-radio-card').forEach(card => {
+    card.addEventListener('click', () => {
+        card.closest('.bs-radio-row').querySelectorAll('.bs-radio-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+    });
+});
+
+// ── Auto-show results tab if result exists ──
+{% if result %}
+showBsTab('results');
+{% endif %}
+
+// ── Generate Exercise Plan via AI ──
+{% if result %}
+const shapeData = {
+    shape: {{ result.shape_name | tojson }},
+    gender: {{ result.gender | tojson }},
+    age: {{ result.age | tojson }},
+    weight: {{ result.weight_kg | tojson }},
+    height: {{ result.height_cm | tojson }},
+    body_fat: {{ result.body_fat | tojson if result.body_fat is not none else '""' }},
+    whr: {{ result.whr | tojson if result.whr is not none else '""' }},
+    fitness_goal: {{ current_user.fitness_goal | tojson if current_user.is_authenticated else '""' }},
+    level: 'beginner'
+};
+
+async function generatePlan() {
+    showBsTab('plan');
+    document.getElementById('plan-loading').style.display = 'block';
+    document.getElementById('plan-error').style.display = 'none';
+    document.getElementById('plan-content').innerHTML = '';
+    document.getElementById('plan-placeholder').style.display = 'none';
+
+    try {
+        const res = await fetch('/generate-body-plan', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(shapeData)
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById('plan-loading').style.display = 'none';
+            document.getElementById('plan-error').textContent = data.error;
+            document.getElementById('plan-error').style.display = 'block';
+            return;
+        }
+
+        renderPlan(data.plan);
+    } catch (err) {
+        document.getElementById('plan-loading').style.display = 'none';
+        document.getElementById('plan-error').textContent = 'Failed to generate plan. Please try again.';
+        document.getElementById('plan-error').style.display = 'block';
+    }
+}
+
+function renderPlan(plan) {
+    document.getElementById('plan-loading').style.display = 'none';
+    const container = document.getElementById('plan-content');
+    let html = '';
+
+    if (plan.tips) {
+        html += '<div class="bs-card bs-plan-tips"><strong>Coach Tip:</strong> ' + plan.tips + '</div>';
+    }
+
+    if (plan.days) {
+        plan.days.forEach((day, i) => {
+            html += '<div class="bs-card bs-day-card">';
+            html += '<div class="bs-day-header"><span class="bs-day-num">' + (i + 1) + '</span><h4>' + day.day + '</h4></div>';
+            if (day.focus) html += '<p class="bs-day-focus">' + day.focus + '</p>';
+            html += '<div class="bs-exercise-list">';
+            day.exercises.forEach(ex => {
+                html += '<div class="bs-exercise">';
+                html += '<div class="bs-ex-name">' + ex.name + '</div>';
+                html += '<div class="bs-ex-detail">' + ex.sets + ' sets &times; ' + ex.reps + '</div>';
+                if (ex.note) html += '<div class="bs-ex-note">' + ex.note + '</div>';
+                html += '</div>';
+            });
+            html += '</div></div>';
+        });
+    }
+
+    container.innerHTML = html;
+    showBsTab('plan');
+}
+{% endif %}
+</script>
+{% endblock %}

@@ -24,7 +24,8 @@ from workout import (
     get_all_days, get_exercises_for_day,
     add_exercise, remove_exercise,
     get_progress, mark_complete, reset_day,
-    get_summary, calculate_bmi
+    get_summary, calculate_bmi,
+    calculate_body_fat_navy, calculate_whr, classify_body_shape, BODY_SHAPE_TIPS
 )
 from data import (
     get_history, get_streak, get_note, save_note,
@@ -53,6 +54,7 @@ from authlib.integrations.flask_client import OAuth
 from exercises import EXERCISES
 from workout_templates import WORKOUT_TEMPLATES
 from database import init_db, seed_default_plan, get_db
+from database import save_body_measurement, get_latest_body_measurement, get_body_measurement_history
 from groq import Groq
 
 load_dotenv(override=True)
@@ -1240,6 +1242,152 @@ def bmi():
         except (ValueError, TypeError):
             flash('Please enter valid numbers.')
     return render_template('bmi.html', result=result, guest=is_guest())
+
+
+@app.route('/body-shape', methods=['GET', 'POST'])
+def body_shape():
+    redir = require_auth_or_guest()
+    if redir: return redir
+    result = None
+    previous = None
+    guest_mode = is_guest()
+
+    if not guest_mode:
+        previous = get_latest_body_measurement(current_user.id)
+
+    if request.method == 'POST':
+        try:
+            gender = request.form.get('gender', '').strip()
+            age = request.form.get('age', '').strip()
+            weight_kg = float(request.form.get('weight_kg', 0))
+            height_cm = float(request.form.get('height_cm', 0))
+            neck_cm = request.form.get('neck_cm', '').strip()
+            shoulder_cm = request.form.get('shoulder_cm', '').strip()
+            waist_cm = float(request.form.get('waist_cm', 0))
+            hip_cm = request.form.get('hip_cm', '').strip()
+
+            if not gender:
+                flash('Please select your gender.')
+                return render_template('body_shape.html', result=None, previous=previous, guest=guest_mode)
+            if weight_kg <= 0 or height_cm <= 0 or waist_cm <= 0:
+                flash('Please enter valid weight, height, and waist measurements.')
+                return render_template('body_shape.html', result=None, previous=previous, guest=guest_mode)
+
+            neck_cm = float(neck_cm) if neck_cm else None
+            shoulder_cm = float(shoulder_cm) if shoulder_cm else None
+            hip_cm = float(hip_cm) if hip_cm else None
+            age = int(age) if age else None
+
+            height_m = height_cm / 100
+            bmi_value, bmi_category = calculate_bmi(weight_kg, height_m)
+            whr = calculate_whr(waist_cm, hip_cm)
+            body_fat = calculate_body_fat_navy(gender, age, weight_kg, height_cm, neck_cm, waist_cm, hip_cm)
+            shape_key, shape_info = classify_body_shape(gender, waist_cm, hip_cm, shoulder_cm, whr)
+            tips = BODY_SHAPE_TIPS.get(shape_key, {})
+
+            result = {
+                'bmi': bmi_value,
+                'bmi_category': bmi_category,
+                'whr': whr,
+                'body_fat': body_fat,
+                'shape_key': shape_key,
+                'shape_name': shape_info[0] if shape_info else 'Unknown',
+                'shape_description': shape_info[1] if shape_info else '',
+                'tips': tips,
+                'gender': gender,
+                'age': age,
+                'weight_kg': weight_kg,
+                'height_cm': height_cm,
+                'neck_cm': neck_cm,
+                'shoulder_cm': shoulder_cm,
+                'waist_cm': waist_cm,
+                'hip_cm': hip_cm,
+            }
+
+            if not guest_mode and current_user.is_authenticated:
+                save_body_measurement(
+                    user_id=current_user.id,
+                    gender=gender, age=age,
+                    weight_kg=weight_kg, height_cm=height_cm,
+                    neck_cm=neck_cm, shoulder_cm=shoulder_cm,
+                    waist_cm=waist_cm, hip_cm=hip_cm,
+                    body_shape=shape_key, body_fat_pct=body_fat,
+                    whr=whr, bmi=bmi_value
+                )
+
+        except (ValueError, TypeError) as e:
+            flash('Please enter valid numeric measurements.')
+
+    return render_template('body_shape.html', result=result, previous=previous, guest=guest_mode)
+
+
+@app.route('/generate-body-plan', methods=['POST'])
+def generate_body_plan():
+    redir = require_auth_or_guest()
+    if redir: return redir
+    if not groq_client:
+        return jsonify({'error': 'AI service not configured.'})
+    data = request.get_json()
+    shape = data.get('shape', '')
+    gender = data.get('gender', '')
+    age = data.get('age', '')
+    weight = data.get('weight', '')
+    height = data.get('height', '')
+    body_fat = data.get('body_fat', '')
+    whr = data.get('whr', '')
+    fitness_goal = data.get('fitness_goal', '')
+    level = data.get('level', 'beginner')
+
+    prompt = f"""You are an expert fitness coach. Based on the user's body shape analysis, create a personalized weekly exercise plan.
+
+Body Shape: {shape}
+Gender: {gender}
+Age: {age}
+Weight: {weight} kg
+Height: {height} cm
+Body Fat: {body_fat}%
+Waist-to-Hip Ratio: {whr}
+Fitness Goal: {fitness_goal or 'General fitness'}
+Experience Level: {level}
+
+Provide a 5-day weekly plan. For each day, give:
+- Day name (e.g., "Day 1 - Upper Body Push")
+- 4-5 exercises with sets x reps
+- Brief focus note
+
+IMPORTANT: Respond ONLY with a valid JSON object with this exact structure:
+{{
+  "days": [
+    {{
+      "day": "Day 1 - [Focus]",
+      "exercises": [
+        {{"name": "Exercise Name", "sets": "3", "reps": "10-12", "note": "Brief tip"}}
+      ],
+      "focus": "What this day targets"
+    }}
+  ],
+  "tips": "1-2 sentence overall advice for this body shape"
+}}
+No markdown, no explanation, no code fences. Just the raw JSON."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model='openai/gpt-oss-120b',
+            messages=[
+                {'role': 'system', 'content': 'You are a fitness coach. Respond ONLY with valid JSON.'},
+                {'role': 'user', 'content': prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2000
+        )
+        text = response.choices[0].message.content.strip()
+        text = text.replace('```json', '').replace('```', '').strip()
+        plan = json_mod.loads(text)
+        return jsonify({'plan': plan})
+    except json_mod.JSONDecodeError:
+        return jsonify({'error': 'AI returned invalid data. Please try again.'})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 
 @app.route('/summary')
