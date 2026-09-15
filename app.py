@@ -811,7 +811,7 @@ SITEMAP_PAGES = [
     ('/', 'weekly', '1.0'),
     ('/workout', 'weekly', '0.9'),
     ('/templates', 'weekly', '0.8'),
-    ('/bmi', 'weekly', '0.8'),
+    ('/body-shape', 'weekly', '0.8'),
     ('/assistant', 'weekly', '0.7'),
     ('/about', 'monthly', '0.5'),
 ]
