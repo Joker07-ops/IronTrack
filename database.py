@@ -311,7 +311,9 @@ def init_db():
                 password_hash TEXT NOT NULL,
                 reset_token TEXT,
                 reset_token_expiry TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                first_name TEXT,
+                last_name TEXT
             )
         """)
 

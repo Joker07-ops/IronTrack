@@ -1,0 +1,89 @@
+{% from '_icons.html' import icon %}
+{% extends "auth_base.html" %}
+{% block title %}IronTrack | Verify Your Email{% endblock %}
+{% block seo_description %}Enter the verification code sent to your email to complete your IronTrack registration.{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-card-header">
+        <h1>VERIFY YOUR EMAIL</h1>
+        <p>We sent a 6-digit code to<br><strong style="color:var(--lime)">{{ email }}</strong></p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}{% for msg in messages %}
+            <div class="auth-flash">{{ msg }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/verify-otp" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="otp-inputs">
+            <input type="text" maxlength="1" class="otp-input" id="d0" name="d0" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required autofocus>
+            <input type="text" maxlength="1" class="otp-input" id="d1" name="d1" inputmode="numeric" pattern="[0-9]">
+            <input type="text" maxlength="1" class="otp-input" id="d2" name="d2" inputmode="numeric" pattern="[0-9]">
+            <input type="text" maxlength="1" class="otp-input" id="d3" name="d3" inputmode="numeric" pattern="[0-9]">
+            <input type="text" maxlength="1" class="otp-input" id="d4" name="d4" inputmode="numeric" pattern="[0-9]">
+            <input type="text" maxlength="1" class="otp-input" id="d5" name="d5" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <button type="submit" class="auth-btn">Verify & Create Account</button>
+    </form>
+
+    <div class="otp-timer" id="otpTimer">Code expires in <strong id="otpCountdown">1:00</strong></div>
+
+    <form method="POST" action="/resend-otp" class="otp-resend-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="otp-resend-btn" id="resendBtn" disabled>Resend Code</button>
+    </form>
+
+    <p class="auth-switch"><a href="/register">← Back to Registration</a></p>
+</div>
+
+<script>
+(function() {
+    const inputs = document.querySelectorAll('.otp-input');
+    inputs.forEach((inp, i) => {
+        inp.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value && i < inputs.length - 1) {
+                inputs[i + 1].focus();
+            }
+        });
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && i > 0) {
+                inputs[i - 1].focus();
+            }
+        });
+        inp.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+            for (let j = 0; j < Math.min(paste.length, 6); j++) {
+                inputs[j].value = paste[j];
+            }
+            if (paste.length >= 6) {
+                inputs[5].focus();
+            } else if (paste.length > 0) {
+                inputs[Math.min(paste.length, 5)].focus();
+            }
+        });
+    });
+
+    let seconds = 60;
+    const countdown = document.getElementById('otpCountdown');
+    const resendBtn = document.getElementById('resendBtn');
+    const timer = setInterval(function() {
+        seconds--;
+        if (seconds <= 0) {
+            clearInterval(timer);
+            countdown.textContent = '0:00';
+            resendBtn.disabled = false;
+            document.getElementById('otpTimer').innerHTML = 'Code expired — <strong>resend below</strong>';
+        } else {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            countdown.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        }
+    }, 1000);
+})();
+</script>
+{% endblock %}

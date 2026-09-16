@@ -364,6 +364,31 @@ def send_verification_email(email, name, token):
     )
     _mail_send(msg)
 
+
+def send_otp_email(email, first_name, otp_code):
+    """Send a 6-digit OTP code for registration verification."""
+    if not MAIL_ENABLED:
+        raise RuntimeError('Mail not configured. Set MAIL_USERNAME and MAIL_PASSWORD in .env')
+    msg = Message(
+        subject='IronTrack — Your Verification Code',
+        recipients=[email],
+        html=f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;color:#f0f0f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#c8ff00;padding:24px;text-align:center;">
+                <h1 style="font-family:monospace;font-size:28px;color:#000;letter-spacing:4px;margin:0;">IRONTRACK</h1>
+            </div>
+            <div style="padding:32px;text-align:center;">
+                <h2 style="color:#c8ff00;margin-bottom:16px;">Verify Your Email</h2>
+                <p style="color:#aaa;margin-bottom:24px;">Hi {first_name}, use this code to complete your registration:</p>
+                <div style="font-family:monospace;font-size:42px;letter-spacing:12px;color:#c8ff00;font-weight:700;margin:24px 0;background:#1a1a1a;border-radius:12px;padding:20px;border:1px solid #333;">{otp_code}</div>
+                <p style="color:#888;font-size:13px;">This code expires in <b style="color:#f0f0f0;">1 minute</b>.</p>
+                <p style="color:#555;font-size:12px;margin-top:24px;">If you didn't create this account, you can safely ignore this email.</p>
+            </div>
+        </div>"""
+    )
+    _mail_send(msg)
+
+
 # ── ACCOUNT LIFECYCLE ──────────────────────
 
 DELETE_GRACE_DAYS = 30
@@ -588,28 +613,30 @@ def register():
         if get_user_by_username(username):
             flash('This username is already taken.')
             return render_template('register.html')
+
+        otp_code = f'{secrets.randbelow(1000000):06d}'
+        otp_expiry = datetime.utcnow() + timedelta(minutes=1)
+
+        session['reg_form'] = {
+            'first_name': first_name,
+            'last_name': last_name,
+            'name': name,
+            'email': email,
+            'password': password,
+            'username': username,
+            'phone': request.form.get('phone', '').strip(),
+        }
+        session['otp_code'] = otp_code
+        session['otp_expiry'] = otp_expiry.isoformat()
+        session['otp_attempts'] = 0
+
         try:
-            password_hash = generate_password_hash(password)
-            verification_token = secrets.token_urlsafe(32)
-            user_id = create_user(name, email, password_hash, verification_token, first_name=first_name, last_name=last_name, username=username)
-            phone = request.form.get('phone', '').strip()
-            if phone:
-                update_user_profile(user_id, name, email, phone=phone, first_name=first_name, last_name=last_name, username=username)
-            seed_default_plan(user_id)
-            audit(user_id, email, 'register', ip=request.remote_addr)
+            send_otp_email(email, first_name, otp_code)
         except Exception as e:
-            flash('Something went wrong. Please try again.')
+            flash(f'Could not send verification email: {e}')
             return render_template('register.html')
 
-        user = User(get_user_by_id(user_id))
-        login_user(user)
-        session.pop('guest', None)
-        try:
-            send_verification_email(email, first_name, verification_token)
-            flash('Account created! Check your email to verify your account.')
-        except Exception as e:
-            flash(f'Account created. Could not send verification email: {e}')
-        return redirect(url_for('home'))
+        return redirect(url_for('verify_otp'))
     return render_template('register.html')
 
 
@@ -851,6 +878,105 @@ def sitemap():
         xml.append(f'  <url><loc>{loc}</loc><changefreq>{freq}</changefreq><priority>{pri}</priority></url>')
     xml.append('</urlset>')
     return Response('\n'.join(xml), mimetype='application/xml')
+
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
+def verify_otp():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    reg_form = session.get('reg_form')
+    otp_code = session.get('otp_code')
+    otp_expiry = session.get('otp_expiry')
+    if not reg_form or not otp_code or not otp_expiry:
+        flash('Session expired. Please register again.')
+        return redirect(url_for('register'))
+    expiry_dt = datetime.fromisoformat(otp_expiry)
+    if datetime.utcnow() > expiry_dt:
+        session.pop('reg_form', None)
+        session.pop('otp_code', None)
+        session.pop('otp_expiry', None)
+        flash('OTP has expired. Please register again.')
+        return redirect(url_for('register'))
+    if request.method == 'POST':
+        entered = ''.join(request.form.get(f'd{i}', '') for i in range(6))
+        session['otp_attempts'] = session.get('otp_attempts', 0) + 1
+        if session['otp_attempts'] > 5:
+            session.pop('reg_form', None)
+            session.pop('otp_code', None)
+            session.pop('otp_expiry', None)
+            session.pop('otp_attempts', None)
+            flash('Too many failed attempts. Please register again.')
+            return redirect(url_for('register'))
+        if entered != otp_code:
+            flash('Invalid code. Please try again.')
+            return render_template('verify_otp.html', email=reg_form['email'])
+        try:
+            password_hash = generate_password_hash(reg_form['password'])
+            verification_token = secrets.token_urlsafe(32)
+            user_id = create_user(
+                reg_form['name'], reg_form['email'], password_hash,
+                verification_token,
+                first_name=reg_form['first_name'],
+                last_name=reg_form['last_name'],
+                username=reg_form['username']
+            )
+            if reg_form.get('phone'):
+                update_user_profile(user_id, reg_form['name'], reg_form['email'],
+                                    phone=reg_form['phone'],
+                                    first_name=reg_form['first_name'],
+                                    last_name=reg_form['last_name'],
+                                    username=reg_form['username'])
+            seed_default_plan(user_id)
+            audit(user_id, reg_form['email'], 'register', ip=request.remote_addr)
+            user = User(get_user_by_id(user_id))
+            login_user(user)
+            session.pop('guest', None)
+        except Exception as e:
+            flash('Something went wrong. Please try again.')
+            return redirect(url_for('register'))
+
+        session.pop('reg_form', None)
+        session.pop('otp_code', None)
+        session.pop('otp_expiry', None)
+        session.pop('otp_attempts', None)
+        try:
+            verification_token_new = secrets.token_urlsafe(32)
+            set_verification_token(user_id, verification_token_new)
+            send_verification_email(reg_form['email'], reg_form['first_name'], verification_token_new)
+            flash('Account created! A verification email has been sent.')
+        except Exception:
+            flash('Account created!')
+        return redirect(url_for('home'))
+    return render_template('verify_otp.html', email=reg_form['email'])
+
+
+@app.route('/resend-otp', methods=['POST'])
+@limiter.limit("3 per minute")
+def resend_otp():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    reg_form = session.get('reg_form')
+    if not reg_form:
+        flash('Session expired. Please register again.')
+        return redirect(url_for('register'))
+    resend_count = session.get('otp_resend_count', 0)
+    if resend_count >= 3:
+        flash('Maximum resend attempts reached. Please register again.')
+        session.pop('reg_form', None)
+        return redirect(url_for('register'))
+    otp_code = f'{secrets.randbelow(1000000):06d}'
+    otp_expiry = datetime.utcnow() + timedelta(minutes=1)
+    session['otp_code'] = otp_code
+    session['otp_expiry'] = otp_expiry.isoformat()
+    session['otp_attempts'] = 0
+    session['otp_resend_count'] = resend_count + 1
+    try:
+        send_otp_email(reg_form['email'], reg_form['first_name'], otp_code)
+        flash('New verification code sent.')
+    except Exception as e:
+        flash(f'Could not send email: {e}')
+    return redirect(url_for('verify_otp'))
 
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
