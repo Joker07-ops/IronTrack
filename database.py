@@ -436,6 +436,7 @@ def init_db():
     """)
 
     # Body measurements — per user (body shape analysis)
+    c.execute("DROP TABLE IF EXISTS body_measurements")
     c.execute(f"""
         CREATE TABLE IF NOT EXISTS body_measurements (
             {pk},
@@ -446,7 +447,7 @@ def init_db():
             height_cm REAL NOT NULL,
             neck_cm REAL,
             shoulder_cm REAL,
-            waist_cm REAL NOT NULL,
+            waist_cm REAL,
             hip_cm REAL,
             body_shape TEXT,
             body_fat_pct REAL,
