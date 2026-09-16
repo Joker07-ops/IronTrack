@@ -1400,23 +1400,35 @@ IMPORTANT: Respond ONLY with a valid JSON object with this exact structure:
 No markdown, no explanation, no code fences. Just the raw JSON."""
 
     try:
-        response = groq_client.chat.completions.create(
-            model='openai/gpt-oss-120b',
-            messages=[
-                {'role': 'system', 'content': 'You are a fitness coach. Respond ONLY with valid JSON.'},
-                {'role': 'user', 'content': prompt}
-            ],
-            temperature=0.7,
-            max_tokens=2000
-        )
-        text = response.choices[0].message.content.strip()
-        text = text.replace('```json', '').replace('```', '').strip()
-        plan = json_mod.loads(text)
-        return jsonify({'plan': plan})
-    except json_mod.JSONDecodeError:
+        raw_text = ''
+        for model in ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant']:
+            try:
+                response = groq_client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {'role': 'system', 'content': 'You are a fitness coach. Respond ONLY with valid JSON, nothing else.'},
+                        {'role': 'user', 'content': prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                raw_text = response.choices[0].message.content.strip()
+                cleaned = raw_text.replace('```json', '').replace('```', '').strip()
+                plan = json_mod.loads(cleaned)
+                if 'days' not in plan:
+                    app.logger.error('[generate-body-plan] Missing "days" key from %s', model)
+                    continue
+                return jsonify({'plan': plan})
+            except json_mod.JSONDecodeError:
+                app.logger.warning('[generate-body-plan] JSON parse failed on %s. Raw: %s', model, raw_text[:300])
+                continue
         return jsonify({'error': 'AI returned invalid data. Please try again.'})
     except Exception as e:
-        return jsonify({'error': str(e)})
+        err_str = str(e)
+        app.logger.error('[generate-body-plan] Groq error: %s', err_str)
+        if '429' in err_str or 'rate' in err_str.lower():
+            return jsonify({'error': 'AI service is busy. Please try again in a moment.'})
+        return jsonify({'error': 'AI service temporarily unavailable. Please try again.'})
 
 
 @app.route('/summary')
