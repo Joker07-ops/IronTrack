@@ -80,13 +80,29 @@ def get_summary(user_id):
 
 def calculate_bmi(weight_kg, height_m):
     if height_m <= 0 or weight_kg <= 0:
-        return None, "Invalid input"
+        return None, "Invalid input", None
     bmi = round(weight_kg / (height_m ** 2), 1)
-    if bmi < 18.5:   category = "Underweight"
-    elif bmi < 25:   category = "Normal"
-    elif bmi < 30:   category = "Overweight"
-    else:             category = "Obese"
-    return bmi, category
+    if bmi < 16:
+        category = "Severely Underweight"; body_type = "Very Slim"
+    elif bmi < 17.5:
+        category = "Underweight"; body_type = "Slim"
+    elif bmi < 18.5:
+        category = "Mildly Underweight"; body_type = "Lean"
+    elif bmi < 20:
+        category = "Lower Normal"; body_type = "Athletic"
+    elif bmi < 22.5:
+        category = "Normal"; body_type = "Smart"
+    elif bmi < 25:
+        category = "Upper Normal"; body_type = "Fit"
+    elif bmi < 27.5:
+        category = "Mildly Overweight"; body_type = "Sturdy"
+    elif bmi < 30:
+        category = "Overweight"; body_type = "Heavy"
+    elif bmi < 35:
+        category = "Obese"; body_type = "Fat"
+    else:
+        category = "Severely Obese"; body_type = "Very Heavy"
+    return bmi, category, body_type
 
 
 # ── Body Shape Analysis ──────────────────────────────────────────────

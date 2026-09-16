@@ -1237,7 +1237,7 @@ def bmi():
         try:
             weight = float(request.form.get('weight'))
             height = float(request.form.get('height'))
-            bmi_value, category = calculate_bmi(weight, height)
+            bmi_value, category, _body_type = calculate_bmi(weight, height)
             result = {'bmi': bmi_value, 'category': category}
         except (ValueError, TypeError):
             flash('Please enter valid numbers.')
@@ -1279,7 +1279,7 @@ def body_shape():
             age = int(age) if age else None
 
             height_m = height_cm / 100
-            bmi_value, bmi_category = calculate_bmi(weight_kg, height_m)
+            bmi_value, bmi_category, body_type = calculate_bmi(weight_kg, height_m)
             whr = calculate_whr(waist_cm, hip_cm)
             body_fat = calculate_body_fat_navy(gender, age, weight_kg, height_cm, neck_cm, waist_cm, hip_cm)
             shape_key, shape_info = classify_body_shape(gender, waist_cm, hip_cm, shoulder_cm, whr)
@@ -1288,6 +1288,7 @@ def body_shape():
             result = {
                 'bmi': bmi_value,
                 'bmi_category': bmi_category,
+                'body_type': body_type,
                 'whr': whr,
                 'body_fat': body_fat,
                 'shape_key': shape_key,

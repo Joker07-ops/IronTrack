@@ -137,10 +137,10 @@
 
             {# Stats Grid #}
             <div class="bs-stats-grid">
-                <div class="bs-stat-card">
+                <div class="bs-stat-card bs-stat-bmi">
                     <div class="bs-stat-value">{{ result.bmi }}</div>
                     <div class="bs-stat-label">BMI</div>
-                    <div class="bs-stat-tag bs-tag-{{ result.bmi_category | lower }}">{{ result.bmi_category }}</div>
+                    <div class="bs-stat-tag bs-tag-{{ result.bmi_category | lower | replace(' ', '-') }}">{{ result.body_type }}</div>
                 </div>
                 {% if result.body_fat is not none %}
                 <div class="bs-stat-card">

@@ -2024,10 +2024,19 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 .bs-stat-value { font-family: var(--font-display); font-size: var(--text-h3); font-weight: var(--fw-bold); color: var(--white); }
 .bs-stat-label { font-family: var(--font-ui); font-size: var(--text-xs); color: var(--g3); text-transform: uppercase; letter-spacing: var(--ls-wider); margin-top: var(--space-1); }
 .bs-stat-tag { display: inline-block; margin-top: var(--space-2); padding: 0.15rem 0.6rem; border-radius: var(--r-full); font-family: var(--font-ui); font-size: var(--text-xs); font-weight: var(--fw-bold); background: var(--lime-glow); color: var(--lime); }
+.bs-stat-bmi { grid-column: 1 / -1; }
+.bs-stat-bmi .bs-stat-value { font-size: var(--text-h2); }
+.bs-stat-bmi .bs-stat-tag { font-size: var(--text-sm); padding: 0.25rem 0.9rem; }
+.bs-tag-severely-underweight { background: rgba(79,142,255,0.1); color: var(--blue); }
 .bs-tag-underweight { background: rgba(79,142,255,0.1); color: var(--blue); }
+.bs-tag-mildly-underweight { background: rgba(0,200,200,0.1); color: #00c8c8; }
+.bs-tag-lower-normal { background: rgba(0,255,135,0.1); color: var(--emerald); }
 .bs-tag-normal { background: rgba(0,255,135,0.1); color: var(--emerald); }
+.bs-tag-upper-normal { background: rgba(200,255,0,0.1); color: var(--lime); }
+.bs-tag-mildly-overweight { background: rgba(255,200,0,0.1); color: #ffc800; }
 .bs-tag-overweight { background: rgba(255,176,32,0.1); color: var(--amber); }
-.bs-tag-obese { background: rgba(255,59,59,0.1); color: var(--red); }
+.bs-tag-obese { background: rgba(255,120,59,0.1); color: #ff7838; }
+.bs-tag-severely-obese { background: rgba(255,59,59,0.1); color: var(--red); }
 
 .bs-tips-card h3 { font-family: var(--font-display); font-size: var(--text-h4); color: var(--white); display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); }
 .bs-tips-grid { display: flex; flex-direction: column; gap: var(--space-4); }
