@@ -1,4 +1,3 @@
-import hashlib
 import os
 import json as json_mod
 import secrets
@@ -7,7 +6,7 @@ import socket
 import time as time_mod
 import mimetypes
 import math
-import urllib.request, urllib.error
+import urllib.request
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, send_from_directory
@@ -17,7 +16,6 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 import pyotp
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 from workout import (
@@ -67,7 +65,8 @@ if not secret_key:
     key_file = os.path.join(os.path.dirname(__file__), '.secret_key')
     if os.path.exists(key_file):
         try:
-            secret_key = open(key_file).read().strip()
+            with open(key_file) as f:
+                secret_key = f.read().strip()
         except Exception:
             secret_key = ''
     if not secret_key:
@@ -76,13 +75,12 @@ if not secret_key:
             with open(key_file, 'w') as f:
                 f.write(secret_key)
         except Exception:
-            # Read-only filesystem on serverless: sessions simply reset per instance.
             pass
 app.secret_key = secret_key
 
 # ── Log SECRET_KEY fingerprint at startup (does NOT log the key itself) ──
-import hashlib as _hashlib
-_sk_fp = _hashlib.sha256(secret_key.encode()).hexdigest()[:12]
+import hashlib
+_sk_fp = hashlib.sha256(secret_key.encode()).hexdigest()[:12]
 print(f"[startup] SECRET_KEY fingerprint={_sk_fp}  source={'env' if os.environ.get('SECRET_KEY') else 'file-or-generated'}")
 
 app.config['PREFERRED_URL_SCHEME'] = os.environ.get('PREFERRED_URL_SCHEME', 'https' if os.environ.get('VERCEL') else 'http')
@@ -94,10 +92,9 @@ app.config['SESSION_COOKIE_NAME'] = 'its'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'true' if os.environ.get('VERCEL') else 'false').lower() == 'true'
 
 # ── PROFILE PHOTO UPLOADS ──
-import os as _os
-UPLOAD_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'uploads')
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
 try:
-    _os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 except OSError:
     pass
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
@@ -2012,9 +2009,9 @@ def update_profile():
         legacy = (user_dict or {}).get('avatar') or ''
         legacy_path = None
         if legacy and legacy != 'db':
-            legacy_path = _os.path.join(UPLOAD_DIR, _os.path.basename(legacy))
+            legacy_path = os.path.join(UPLOAD_DIR, os.path.basename(legacy))
         update_user_avatar(current_user.id, avatar_data=avatar_data, avatar_mime=avatar_mime)
-        if legacy_path and _os.path.exists(legacy_path):
+        if legacy_path and os.path.exists(legacy_path):
             try:
                 _os.remove(legacy_path)
             except OSError:

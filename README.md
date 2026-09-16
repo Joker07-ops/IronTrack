@@ -12,13 +12,17 @@ get coached — all in one place, without subscriptions or ads.
   Cardio, Full Body, Rest). Mark exercises complete, add/remove exercises, and use the
   built-in rest timer.
 - **Training Templates** — prebuilt plans for every goal (build muscle, lose weight, etc.),
-  applied to your schedule with one click.
-- **Health Calculator** — BMI and health-category feedback with visual results.
+  applied to your schedule with one click. Create unlimited custom templates from the
+  Health Calculator and reuse them anytime.
+- **Health Calculator** — calculate BMI, select your body type, and get a personalized
+  AI-generated 5-day exercise plan. Save plans as custom templates for later use.
 - **Progress Charts** — interactive charts (React + Chart.js, no CDN) showing completion
   rate and a day-by-day breakdown.
 - **Workout History** — a full timestamped log, filterable by exercise and date.
 - **AI Assistant (IronBot)** — chat with a Groq-powered coach, generate personalized
   workouts, and get AI-generated exercise details (benefits + video quality notes).
+- **Email OTP Verification** — 6-digit email verification during registration with
+  1-minute expiry and resend support.
 - **Account system** — email + password and Google Sign-In (OAuth), email verification,
   password reset, and a 3-step account deletion flow with a 30-day grace period.
 - **Profile page** — Instagram-style profile with avatar (upload via camera badge), stats,
@@ -36,9 +40,9 @@ get coached — all in one place, without subscriptions or ads.
 | Backend   | Flask, Flask-Login, Flask-Mail, Flask-Limiter |
 | Database  | dual backend: SQLite (local `gymtrack.db`) or Postgres via `DATABASE_URL` (serverless) |
 | Frontend  | Jinja2, vanilla JS, React (charts), CSS design tokens |
-| AI        | Groq API, Google Gemini helper |
-| Auth      | Email/password + Google OAuth 2.0 (Authlib) |
-| Deploy    | gunicorn (see `Procfile`) or Vercel serverless (see `vercel.json`) |
+| AI        | Groq API (GPT-OSS 120B, Llama fallback), Google Gemini helper |
+| Auth      | Email/password + Google OAuth 2.0 (Authlib), email OTP verification |
+| Deploy    | Vercel serverless (`api/index.py`) or gunicorn (Render / Heroku) |
 
 ## Getting Started
 
@@ -95,15 +99,15 @@ startup.
 | `SECRET_KEY`            | optional | Flask session signing key. Auto-generated to `.secret_key` if unset. |
 | `GROQ_API_KEY`          | optional | Enables the IronBot AI assistant + AI-generated exercise details. |
 | `GEMINI_API_KEY`        | optional | Used by `gemini_workout.py` for alternative AI workout generation. |
-| `MAIL_USERNAME`         | optional | Gmail address used as SMTP sender (password reset, verification emails). |
+| `MAIL_USERNAME`         | optional | Gmail address used as SMTP sender (OTP, verification, password reset). |
 | `MAIL_PASSWORD`         | optional | Gmail app password. `MAIL_USERNAME` + this enable Flask-Mail. |
 | `GOOGLE_CLIENT_ID`      | optional | Google OAuth client ID for Sign-In with Google. |
 | `GOOGLE_CLIENT_SECRET`  | optional | Google OAuth client secret. |
 | `ADMIN_EMAILS`          | optional | Comma-separated list of emails with access to the admin feedback inbox. |
 | `SITE_URL`              | optional | Canonical site URL (used for SEO URLs in meta tags). |
-| `DATABASE_URL`          | prod | Postgres connection string. When set, Postgres is used (e.g. on Vercel); otherwise SQLite (`gymtrack.db`). |
-| `SESSION_COOKIE_SECURE` | optional | Send session cookies over HTTPS only. Defaults to `true` on Vercel, `false` locally. |
-| `PREFERRED_URL_SCHEME`  | optional | Forces redirect scheme to `https` behind a proxy. Defaults to `https` on Vercel. |
+| `DATABASE_URL`          | prod | Postgres connection string. When set, Postgres is used; otherwise SQLite. |
+| `TURNSTILE_SECRET_KEY`  | optional | Cloudflare Turnstile CAPTCHA secret for auth forms. |
+| `TURNSTILE_SITE_KEY`    | optional | Cloudflare Turnstile site key (shown in HTML). |
 
 ### Google OAuth notes
 
@@ -119,46 +123,41 @@ Register the following URLs as **Authorized redirect URIs** in your Google Cloud
 ├── api/index.py           # Vercel serverless entrypoint (WSGI)
 ├── database.py            # Dual-backend schema (SQLite + Postgres) + seed logic
 ├── data.py                # Data access layer (users, progress, chat, feedback, …)
-├── workout.py             # Workout plan + progress business logic
+├── workout.py             # Workout plan + progress business logic + BMI calculator
 ├── exercises.py           # Built-in exercise catalogue
 ├── workout_templates.py   # Prebuilt training plan templates
 ├── gemini_workout.py      # Gemini-based workout generation helper
 ├── requirements.txt
-├── vercel.json                 # Vercel serverless config
-├── Procfile / runtime.txt      # gunicorn config (Render / Heroku)
-├── css/                        # Design tokens, app styles, auth styles (served via /css/)
-├── templates/                  # Jinja2 templates (incl. base.html, auth_base.html)
+├── Procfile / runtime.txt # gunicorn config (Render / Heroku)
+├── css/                   # Design tokens, app styles, auth styles (served via /css/)
+├── templates/             # Jinja2 templates (incl. base.html, auth_base.html)
 └── static/
-    ├── icons/sprite.svg        # Hand-written Lucide-style SVG sprite
-    ├── fonts/                  # Self-hosted Roboto / Roboto Condensed
-    ├── libs/                   # Vendored React + Chart.js
-    ├── react-analytics.js      # Theme-aware chart component (plain JS)
-    ├── sw.js                   # Service worker
-    └── uploads/                # Legacy local-only profile photos (not committed)
+    ├── icons/sprite.svg   # Hand-written Lucide-style SVG sprite
+    ├── fonts/             # Self-hosted Roboto / Roboto Condensed
+    ├── libs/              # Vendored React + Chart.js
+    ├── react-analytics.js # Theme-aware chart component (plain JS)
+    ├── sw.js              # Service worker
+    └── uploads/           # Legacy local-only profile photos (not committed)
 ```
 
 ## Deployment
 
 ### Option A — Vercel (serverless)
 
-The app ships with a Vercel serverless entrypoint (`api/index.py` + `vercel.json`). It uses
+The app ships with a Vercel serverless entrypoint (`api/index.py`). It uses
 a Postgres database — set these environment variables in your Vercel project:
 
 1. Create a free Postgres database (e.g. [Neon](https://neon.tech) or
    [Supabase](https://supabase.com)) and copy its connection string.
 2. In Vercel → project → **Settings → Environment Variables** add:
-   - `DATABASE_URL` — your Postgres connection string (hostname must be `postgres.…` /
-     `-pooler.…`, not inlined credentials with dashes in the password).
+   - `DATABASE_URL` — your Postgres connection string.
    - `SECRET_KEY` — a long random string (sessions reset per instance otherwise).
    - `SITE_URL` — e.g. `https://your-app.vercel.app`.
    - Optional: `GROQ_API_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `GOOGLE_CLIENT_ID`,
      `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`.
-3. Import the repo on Vercel (Framework Preset: **Other**). The build/start commands are
-   handled automatically by `vercel.json`.
+3. Import the repo on Vercel (Framework Preset: **Other**).
 4. If you use Sign-In with Google, register one redirect URI in Google Cloud for the
    **production** domain only: `https://<your-app>.vercel.app/login/google/authorized`.
-   Note that every Vercel preview deployment gets its own URL, and Google validates the
-   redirect URI per domain — so always test on the production alias, never on preview URLs.
 
 > **Note:** serverless filesystems are read-only — profile photos are stored in the
 > database (served via `/avatar/<id>`) instead of on disk.
