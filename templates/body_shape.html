@@ -76,49 +76,13 @@
                 {# Section: Body Type #}
                 <div class="bs-section">
                     <div class="bs-section-label">{{ icon('target', 'icon-xs') }} Your Body Type *</div>
-                    <div class="bs-bodytype-grid">
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Slim' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Slim" {% if request.form.get('body_type') == 'Slim' %}checked{% endif %} required>
-                            <span class="bs-bt-emoji">🪶</span>
-                            <span class="bs-bt-name">Slim</span>
-                            <span class="bs-bt-desc">Lean frame, low body fat</span>
+                    <div class="bs-radio-row bs-bodytype-row">
+                        {% for bt in ['Slim', 'Athletic', 'Smart', 'Fit', 'Sturdy', 'Heavy', 'Fat'] %}
+                        <label class="bs-radio-card {% if request.form.get('body_type') == bt %}selected{% endif %}">
+                            <input type="radio" name="body_type" value="{{ bt }}" {% if request.form.get('body_type') == bt %}checked{% endif %} {% if loop.first %}required{% endif %}>
+                            {{ bt }}
                         </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Athletic' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Athletic" {% if request.form.get('body_type') == 'Athletic' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">💪</span>
-                            <span class="bs-bt-name">Athletic</span>
-                            <span class="bs-bt-desc">Toned, active build</span>
-                        </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Smart' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Smart" {% if request.form.get('body_type') == 'Smart' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">🔥</span>
-                            <span class="bs-bt-name">Smart</span>
-                            <span class="bs-bt-desc">Balanced, healthy weight</span>
-                        </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Fit' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Fit" {% if request.form.get('body_type') == 'Fit' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">⚡</span>
-                            <span class="bs-bt-name">Fit</span>
-                            <span class="bs-bt-desc">Solid build, slightly above average</span>
-                        </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Sturdy' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Sturdy" {% if request.form.get('body_type') == 'Sturdy' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">🧱</span>
-                            <span class="bs-bt-name">Sturdy</span>
-                            <span class="bs-bt-desc">Broad, heavy-set frame</span>
-                        </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Heavy' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Heavy" {% if request.form.get('body_type') == 'Heavy' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">🏋️</span>
-                            <span class="bs-bt-name">Heavy</span>
-                            <span class="bs-bt-desc">Large build, excess weight</span>
-                        </label>
-                        <label class="bs-bodytype-card {% if request.form.get('body_type') == 'Fat' %}selected{% endif %}">
-                            <input type="radio" name="body_type" value="Fat" {% if request.form.get('body_type') == 'Fat' %}checked{% endif %}>
-                            <span class="bs-bt-emoji">🫃</span>
-                            <span class="bs-bt-name">Fat</span>
-                            <span class="bs-bt-desc">Overweight, needs fat loss</span>
-                        </label>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -256,14 +220,6 @@ function showBsTab(tab) {
 document.querySelectorAll('.bs-radio-card').forEach(card => {
     card.addEventListener('click', () => {
         card.closest('.bs-radio-row').querySelectorAll('.bs-radio-card').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-    });
-});
-
-// ── Body type card selection ──
-document.querySelectorAll('.bs-bodytype-card').forEach(card => {
-    card.addEventListener('click', () => {
-        document.querySelectorAll('.bs-bodytype-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
     });
 });
