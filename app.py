@@ -1268,7 +1268,17 @@ def apply_custom_template(template_id):
     if not template:
         flash('Custom template not found.')
         return redirect(url_for('templates_page'))
-    apply_workout_template(current_user.id, template['plan'])
+    plan = template['plan']
+    # Convert AI format {days: [{day, exercises: [{name}]}]} to {day: [exercise_names]}
+    if 'days' in plan and isinstance(plan['days'], list):
+        converted = {}
+        for day_obj in plan['days']:
+            day_label = day_obj.get('day', f'Day {len(converted)+1}')
+            exercises = [ex.get('name', str(ex)) if isinstance(ex, dict) else str(ex) for ex in day_obj.get('exercises', [])]
+            if exercises:
+                converted[day_label] = exercises
+        plan = converted
+    apply_workout_template(current_user.id, plan)
     flash(f"\"{template['name']}\" applied — your workout plan has been updated.")
     return redirect(url_for('workout'))
 
