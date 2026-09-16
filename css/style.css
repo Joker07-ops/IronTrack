@@ -2109,6 +2109,45 @@ html { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PLAN ACTIONS + SAVE TEMPLATE MODAL
+═══════════════════════════════════════════════════════════ */
+.bs-plan-actions {
+    display: flex; gap: var(--space-3); margin-bottom: var(--space-4);
+}
+.bs-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.bs-modal {
+    background: var(--card1); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-8);
+    width: 90%; max-width: 420px;
+}
+.bs-modal h3 { font-family: var(--font-display); font-size: 1.2rem; letter-spacing: 1px; color: var(--white); margin-bottom: var(--space-2); }
+.bs-modal p { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-5); }
+.bs-modal-actions { display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6); }
+
+/* ═══════════════════════════════════════════════════════════
+   CUSTOM TEMPLATES
+═══════════════════════════════════════════════════════════ */
+.template-section { margin-top: var(--space-10); }
+.template-section-title {
+    font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 1px;
+    color: var(--text-secondary); text-transform: uppercase; margin-bottom: var(--space-6);
+}
+.template-card-custom { border-color: var(--lime); }
+.template-custom-actions { display: flex; gap: var(--space-3); margin-top: var(--space-5); }
+.template-custom-actions form { flex: 1; }
+.template-empty {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+    padding: var(--space-10) var(--space-6);
+    background: var(--card2); border: 1px dashed var(--border);
+    border-radius: var(--radius-lg); color: var(--text-secondary); text-align: center;
+}
+.template-empty a { color: var(--lime); text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════════════════
    REDUCED MOTION
 ═══════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {

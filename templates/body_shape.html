@@ -198,6 +198,13 @@
             <p>Generating your personalized plan...</p>
         </div>
         <div id="plan-error" class="bs-error" style="display:none"></div>
+        <div id="plan-actions" class="bs-plan-actions" style="display:none">
+            {% if not guest %}
+            <button class="btn btn-primary" onclick="openSaveTemplateModal()">
+                {{ icon('save', 'icon-sm') }} Save as Template
+            </button>
+            {% endif %}
+        </div>
         <div id="plan-content"></div>
         <div id="plan-placeholder" class="bs-card bs-empty">
             {{ icon('zap', 'icon-lg') }}
@@ -205,6 +212,19 @@
         </div>
     </div>
 
+</div>
+
+{# ── SAVE TEMPLATE MODAL ── #}
+<div id="save-template-modal" class="bs-modal-overlay" style="display:none" onclick="closeSaveTemplateModal(event)">
+    <div class="bs-modal" onclick="event.stopPropagation()">
+        <h3>Save as Template</h3>
+        <p>Give your workout plan a name so you can reuse it later.</p>
+        <input type="text" id="template-name-input" class="bs-input" placeholder="e.g. My Bulking Plan" maxlength="80">
+        <div class="bs-modal-actions">
+            <button class="btn btn-ghost" onclick="closeSaveTemplateModal()">Cancel</button>
+            <button class="btn btn-primary" id="save-template-btn" onclick="saveTemplate()">Save Template</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -274,6 +294,7 @@ async function generatePlan() {
 
 function renderPlan(plan) {
     document.getElementById('plan-loading').style.display = 'none';
+    lastGeneratedPlan = plan;
     const container = document.getElementById('plan-content');
     let html = '';
 
@@ -299,8 +320,62 @@ function renderPlan(plan) {
     }
 
     container.innerHTML = html;
+    document.getElementById('plan-actions').style.display = 'flex';
     showBsTab('plan');
 }
+
+// ── Save Template Modal ──
+let lastGeneratedPlan = null;
+
+const _origRenderPlan = typeof renderPlan !== 'undefined' ? renderPlan : null;
+
+function openSaveTemplateModal() {
+    document.getElementById('save-template-modal').style.display = 'flex';
+    const inp = document.getElementById('template-name-input');
+    inp.value = '';
+    inp.focus();
+}
+
+function closeSaveTemplateModal(e) {
+    if (!e || e.target === document.getElementById('save-template-modal')) {
+        document.getElementById('save-template-modal').style.display = 'none';
+    }
+}
+
+async function saveTemplate() {
+    const name = document.getElementById('template-name-input').value.trim();
+    if (!name) { document.getElementById('template-name-input').focus(); return; }
+    if (!lastGeneratedPlan) { alert('No plan to save.'); return; }
+
+    const btn = document.getElementById('save-template-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+        const res = await fetch('/save-custom-template', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name, plan: lastGeneratedPlan})
+        });
+        const data = await res.json();
+        if (data.error) {
+            alert(data.error);
+        } else {
+            closeSaveTemplateModal();
+            showToast(data.message, 'success');
+        }
+    } catch (err) {
+        alert('Failed to save template. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Template';
+    }
+}
+
+document.getElementById('template-name-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') saveTemplate();
+    if (e.key === 'Escape') closeSaveTemplateModal();
+});
 {% endif %}
 </script>
 {% endblock %}

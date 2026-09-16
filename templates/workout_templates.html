@@ -51,4 +51,53 @@
     </div>
     {% endfor %}
 </div>
+
+{# ── MY CUSTOM TEMPLATES ── #}
+{% if not guest %}
+<div class="template-section">
+    <h2 class="template-section-title">My Custom Templates</h2>
+
+    {% if custom_templates %}
+    <div class="template-grid">
+        {% for t in custom_templates %}
+        <div class="template-card template-card-custom">
+            <div class="template-card-header">
+                <span class="template-icon">{{ icon('user', "icon-xl") }}</span>
+                <div class="template-tags">
+                    <span class="ex-tag">Custom</span>
+                    <span class="ex-tag">{{ t.days_count }} Days</span>
+                </div>
+            </div>
+            <h2 class="template-name">{{ t.name }}</h2>
+            <p class="template-desc">Created {{ t.created_at[:10] }}{% if t.source %} · Source: {{ t.source }}{% endif %}</p>
+
+            <div class="template-days">
+                {% for day in t.plan.keys() %}
+                <span class="template-day-chip">{{ day }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="template-custom-actions">
+                <form method="POST" action="/templates/apply-custom/{{ t.id }}"
+                      onsubmit="return confirm('Apply &quot;{{ t.name }}&quot;? This replaces your current workout days and exercises.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary btn-full">Use This Plan</button>
+                </form>
+                <form method="POST" action="/delete-custom-template/{{ t.id }}"
+                      onsubmit="return confirm('Delete &quot;{{ t.name }}&quot;? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost btn-full">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="template-empty">
+        {{ icon('plus-circle', 'icon-lg') }}
+        <p>No custom templates yet. Create one from the <a href="/body-shape">Health Calculator</a>!</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

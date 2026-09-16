@@ -48,7 +48,9 @@ from data import (
     update_user_avatar,
     auth_locked_seconds, record_auth_failure, clear_auth_failures,
     audit, get_totp_secret, set_totp_secret,
-    AUTH_LOCK_MINUTES
+    AUTH_LOCK_MINUTES,
+    save_custom_template, get_custom_templates, get_custom_template,
+    delete_custom_template,
 )
 from authlib.integrations.flask_client import OAuth
 from exercises import EXERCISES
@@ -1210,8 +1212,11 @@ def add_day():
 def templates_page():
     redir = require_auth_or_guest()
     if redir: return redir
+    custom = []
+    if not is_guest():
+        custom = get_custom_templates(current_user.id)
     return render_template('workout_templates.html',
-                           templates=WORKOUT_TEMPLATES, guest=is_guest())
+                           templates=WORKOUT_TEMPLATES, custom_templates=custom, guest=is_guest())
 
 
 @app.route('/templates/apply/<template_id>', methods=['POST'])
@@ -1223,6 +1228,46 @@ def apply_template(template_id):
         flash('Template not found.')
         return redirect(url_for('templates_page'))
 
+    apply_workout_template(current_user.id, template['plan'])
+    flash(f"\"{template['name']}\" applied — your workout plan has been updated.")
+    return redirect(url_for('workout'))
+
+
+@app.route('/save-custom-template', methods=['POST'])
+@require_verified
+@login_required
+def save_custom_template_route():
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    plan = data.get('plan')
+    if not name or len(name) > 80:
+        return jsonify({'error': 'Template name is required (max 80 characters).'}), 400
+    if not plan or not isinstance(plan, dict):
+        return jsonify({'error': 'Invalid plan data.'}), 400
+    template_id = save_custom_template(current_user.id, name, plan)
+    return jsonify({'ok': True, 'id': template_id, 'message': f'"{name}" saved as template.'})
+
+
+@app.route('/delete-custom-template/<int:template_id>', methods=['POST'])
+@require_verified
+@login_required
+def delete_custom_template_route(template_id):
+    deleted = delete_custom_template(current_user.id, template_id)
+    if deleted:
+        flash('Custom template deleted.')
+    else:
+        flash('Template not found.')
+    return redirect(url_for('templates_page'))
+
+
+@app.route('/templates/apply-custom/<int:template_id>', methods=['POST'])
+@require_verified
+@login_required
+def apply_custom_template(template_id):
+    template = get_custom_template(current_user.id, template_id)
+    if not template:
+        flash('Custom template not found.')
+        return redirect(url_for('templates_page'))
     apply_workout_template(current_user.id, template['plan'])
     flash(f"\"{template['name']}\" applied — your workout plan has been updated.")
     return redirect(url_for('workout'))

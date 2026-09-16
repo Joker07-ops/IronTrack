@@ -472,6 +472,78 @@ def apply_workout_template(user_id, plan):
     conn.close()
 
 
+# ── CUSTOM TEMPLATES ─────────────────
+
+def save_custom_template(user_id, name, plan, source='health_calculator'):
+    """Save a workout plan as a custom template. Returns the new template ID."""
+    import json as json_mod
+    conn = get_db()
+    c = conn.cursor()
+    plan_json = json_mod.dumps(plan)
+    c.execute(
+        "INSERT INTO custom_templates (user_id, name, plan_json, source) VALUES (?, ?, ?, ?)",
+        (user_id, name, plan_json, source)
+    )
+    template_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return template_id
+
+
+def get_custom_templates(user_id):
+    """Return all custom templates for a user, newest first."""
+    import json as json_mod
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, name, plan_json, source, created_at FROM custom_templates WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,)
+    )
+    templates = []
+    for row in c.fetchall():
+        t = dict(row)
+        t['plan'] = json_mod.loads(t['plan_json'])
+        t['days_count'] = len(t['plan'])
+        del t['plan_json']
+        templates.append(t)
+    conn.close()
+    return templates
+
+
+def get_custom_template(user_id, template_id):
+    """Return a single custom template, or None."""
+    import json as json_mod
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, name, plan_json, source, created_at FROM custom_templates WHERE id = ? AND user_id = ?",
+        (template_id, user_id)
+    )
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return None
+    t = dict(row)
+    t['plan'] = json_mod.loads(t['plan_json'])
+    del t['plan_json']
+    conn.close()
+    return t
+
+
+def delete_custom_template(user_id, template_id):
+    """Delete a custom template. Returns True if deleted."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "DELETE FROM custom_templates WHERE id = ? AND user_id = ?",
+        (template_id, user_id)
+    )
+    deleted = c.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
 # ── CHAT HISTORY (IronBot) ─────────────────
 
 def create_chat_session(user_id, title='New Chat'):

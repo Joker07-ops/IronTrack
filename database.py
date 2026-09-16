@@ -44,6 +44,10 @@ class _SqliteCursor:
     def lastrowid(self):
         return self._raw.lastrowid
 
+    @property
+    def rowcount(self):
+        return self._raw.rowcount
+
     def execute(self, sql, params=None):
         self._raw.execute(sql, params if params is not None else ())
         return self
@@ -453,6 +457,18 @@ def init_db():
             body_fat_pct REAL,
             whr REAL,
             bmi REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Custom workout templates — user-saved from health calculator
+    c.execute(f"""
+        CREATE TABLE IF NOT EXISTS custom_templates (
+            {pk},
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            plan_json TEXT NOT NULL,
+            source TEXT DEFAULT 'health_calculator',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
