@@ -1249,11 +1249,7 @@ def body_shape():
     redir = require_auth_or_guest()
     if redir: return redir
     result = None
-    previous = None
     guest_mode = is_guest()
-
-    if not guest_mode:
-        previous = get_latest_body_measurement(current_user.id)
 
     if request.method == 'POST':
         try:
@@ -1261,65 +1257,54 @@ def body_shape():
             age = request.form.get('age', '').strip()
             weight_kg = float(request.form.get('weight_kg', 0))
             height_cm = float(request.form.get('height_cm', 0))
-            neck_cm = request.form.get('neck_cm', '').strip()
-            shoulder_cm = request.form.get('shoulder_cm', '').strip()
-            waist_cm = float(request.form.get('waist_cm', 0))
+            body_type = request.form.get('body_type', '').strip()
+            fitness_goal = request.form.get('fitness_goal', '').strip()
+            waist_cm = request.form.get('waist_cm', '').strip()
             hip_cm = request.form.get('hip_cm', '').strip()
 
             if not gender:
                 flash('Please select your gender.')
-                return render_template('body_shape.html', result=None, previous=previous, guest=guest_mode)
-            if weight_kg <= 0 or height_cm <= 0 or waist_cm <= 0:
-                flash('Please enter valid weight, height, and waist measurements.')
-                return render_template('body_shape.html', result=None, previous=previous, guest=guest_mode)
-
-            neck_cm = float(neck_cm) if neck_cm else None
-            shoulder_cm = float(shoulder_cm) if shoulder_cm else None
-            hip_cm = float(hip_cm) if hip_cm else None
-            age = int(age) if age else None
+                return render_template('body_shape.html', result=None, guest=guest_mode)
+            if weight_kg <= 0 or height_cm <= 0:
+                flash('Please enter valid weight and height.')
+                return render_template('body_shape.html', result=None, guest=guest_mode)
+            if not body_type:
+                flash('Please select your body type.')
+                return render_template('body_shape.html', result=None, guest=guest_mode)
 
             height_m = height_cm / 100
-            bmi_value, bmi_category, body_type = calculate_bmi(weight_kg, height_m)
-            whr = calculate_whr(waist_cm, hip_cm)
-            body_fat = calculate_body_fat_navy(gender, age, weight_kg, height_cm, neck_cm, waist_cm, hip_cm)
-            shape_key, shape_info = classify_body_shape(gender, waist_cm, hip_cm, shoulder_cm, whr)
-            tips = BODY_SHAPE_TIPS.get(shape_key, {})
+            bmi_value, bmi_category, _bt = calculate_bmi(weight_kg, height_m)
+            waist_cm = float(waist_cm) if waist_cm else None
+            hip_cm = float(hip_cm) if hip_cm else None
+            whr = calculate_whr(waist_cm, hip_cm) if waist_cm and hip_cm else None
 
             result = {
                 'bmi': bmi_value,
                 'bmi_category': bmi_category,
                 'body_type': body_type,
                 'whr': whr,
-                'body_fat': body_fat,
-                'shape_key': shape_key,
-                'shape_name': shape_info[0] if shape_info else 'Unknown',
-                'shape_description': shape_info[1] if shape_info else '',
-                'tips': tips,
                 'gender': gender,
-                'age': age,
+                'age': int(age) if age else None,
                 'weight_kg': weight_kg,
                 'height_cm': height_cm,
-                'neck_cm': neck_cm,
-                'shoulder_cm': shoulder_cm,
-                'waist_cm': waist_cm,
-                'hip_cm': hip_cm,
+                'fitness_goal': fitness_goal,
             }
 
             if not guest_mode and current_user.is_authenticated:
                 save_body_measurement(
                     user_id=current_user.id,
-                    gender=gender, age=age,
+                    gender=gender, age=int(age) if age else None,
                     weight_kg=weight_kg, height_cm=height_cm,
-                    neck_cm=neck_cm, shoulder_cm=shoulder_cm,
+                    neck_cm=None, shoulder_cm=None,
                     waist_cm=waist_cm, hip_cm=hip_cm,
-                    body_shape=shape_key, body_fat_pct=body_fat,
+                    body_shape=body_type, body_fat_pct=None,
                     whr=whr, bmi=bmi_value
                 )
 
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             flash('Please enter valid numeric measurements.')
 
-    return render_template('body_shape.html', result=result, previous=previous, guest=guest_mode)
+    return render_template('body_shape.html', result=result, guest=guest_mode)
 
 
 @app.route('/generate-body-plan', methods=['POST'])
@@ -1329,25 +1314,23 @@ def generate_body_plan():
     if not groq_client:
         return jsonify({'error': 'AI service not configured.'})
     data = request.get_json()
-    shape = data.get('shape', '')
+    body_type = data.get('body_type', '')
     gender = data.get('gender', '')
     age = data.get('age', '')
     weight = data.get('weight', '')
     height = data.get('height', '')
-    body_fat = data.get('body_fat', '')
-    whr = data.get('whr', '')
+    bmi = data.get('bmi', '')
     fitness_goal = data.get('fitness_goal', '')
     level = data.get('level', 'beginner')
 
-    prompt = f"""You are an expert fitness coach. Based on the user's body shape analysis, create a personalized weekly exercise plan.
+    prompt = f"""You are an expert fitness coach. Create a personalized weekly exercise plan.
 
-Body Shape: {shape}
+Body Type: {body_type}
 Gender: {gender}
 Age: {age}
 Weight: {weight} kg
 Height: {height} cm
-Body Fat: {body_fat}%
-Waist-to-Hip Ratio: {whr}
+BMI: {bmi}
 Fitness Goal: {fitness_goal or 'General fitness'}
 Experience Level: {level}
 
@@ -1367,7 +1350,7 @@ IMPORTANT: Respond ONLY with a valid JSON object with this exact structure:
       "focus": "What this day targets"
     }}
   ],
-  "tips": "1-2 sentence overall advice for this body shape"
+  "tips": "1-2 sentence overall advice for this body type"
 }}
 No markdown, no explanation, no code fences. Just the raw JSON."""
 
