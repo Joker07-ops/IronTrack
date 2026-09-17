@@ -4,6 +4,9 @@ import sqlite3
 
 DB_FILE = "gymtrack.db"
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+# Strip channel_binding=require — causes SSL errors with Neon pooler
+if 'channel_binding=require' in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace('channel_binding=require', '').replace('&&', '&').replace('?&', '?').rstrip('&?')
 IS_POSTGRES = DATABASE_URL.startswith('postgres://') or DATABASE_URL.startswith('postgresql://')
 
 
@@ -103,6 +106,10 @@ def _get_pg_pool():
                 'row_factory': psycopg.rows.dict_row,
                 'connect_timeout': 15,
                 'autocommit': True,
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
             },
         )
         _pg_pool.open()
@@ -157,8 +164,23 @@ class _PgConn:
     def __init__(self):
         pool = _get_pg_pool()
         self._pool = pool
-        self._raw = pool.getconn()
+        self._raw = self._get_valid_connection(pool)
         self._closed = False
+
+    @staticmethod
+    def _get_valid_connection(pool):
+        """Get a connection, retrying once if it's stale."""
+        import psycopg
+        conn = pool.getconn()
+        try:
+            conn.execute('SELECT 1')
+        except (psycopg.OperationalError, psycopg.InterfaceError):
+            try:
+                pool.putconn(conn, close=True)
+            except Exception:
+                pass
+            conn = pool.getconn()
+        return conn
 
     def cursor(self):
         return _PgCursor(self)
@@ -168,7 +190,13 @@ class _PgConn:
 
     def close(self):
         if not self._closed:
-            self._pool.putconn(self._raw)
+            try:
+                self._pool.putconn(self._raw)
+            except Exception:
+                try:
+                    self._pool.putconn(self._raw, close=True)
+                except Exception:
+                    pass
             self._closed = True
 
 
